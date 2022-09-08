@@ -15,7 +15,7 @@ TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
-                     LPSTR lpszArgument,
+                     LPSTR a,
                      int nCmdShow)
 {
     HWND hwnd;               /* This is the handle for our window */
