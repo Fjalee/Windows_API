@@ -13,6 +13,8 @@ LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 /*  Make the class name into a global variable  */
 TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
 
+HMENU hMenu;
+
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
                      LPSTR args,
@@ -73,10 +75,22 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     return messages.wParam;
 }
 
+void AddMenu(HWND hWnd)
+{
+    hMenu = CreateMenu();
+
+    AppendMenu(hMenu, MF_STRING, NULL, "Test");
+
+    SetMenu(hWnd, hMenu);
+}
+
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)                  /* handle the messages */
     {
+        case WM_CREATE:
+            AddMenu(hwnd);
+            break;
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
             break;
