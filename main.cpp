@@ -15,7 +15,7 @@ TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
-                     LPSTR a,
+                     LPSTR args,
                      int nCmdShow)
 {
     HWND hwnd;               /* This is the handle for our window */
@@ -37,7 +37,7 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     wincl.cbClsExtra = 0;                      /* No extra bytes after the window class */
     wincl.cbWndExtra = 0;                      /* structure or the window instance */
     /* Use Windows's default colour as the background of the window */
-    wincl.hbrBackground = (HBRUSH) COLOR_BACKGROUND;
+    wincl.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
 
     /* Register the window class, and if it fails quit the program */
     if (!RegisterClassEx (&wincl))
