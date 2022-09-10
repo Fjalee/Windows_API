@@ -7,11 +7,15 @@
 #include <tchar.h>
 #include <windows.h>
 
+#define PARAM_MENU_EXIT 1
+
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 
 /*  Make the class name into a global variable  */
 TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
+
+HMENU hMenu;
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
@@ -73,10 +77,69 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     return messages.wParam;
 }
 
+
+
+
+
+/////////////////////////////////////////////////////////////////////
+///////////////////////////MENU//////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+void AppendGameNewSubMenu(HMENU hParentMenu)
+{
+    HMENU hGameNewMenu = CreateMenu();
+    AppendMenu(hParentMenu, MF_POPUP, (UINT_PTR)hGameNewMenu, "New");
+
+    AppendMenu(hGameNewMenu, MF_SEPARATOR, NULL, NULL);
+    AppendMenu(hGameNewMenu, MF_STRING, NULL, "Custom");
+}
+
+void AppendGameSubMenu(HMENU hParentMenu)
+{
+    HMENU hGameMenu = CreateMenu();
+    AppendMenu(hParentMenu, MF_POPUP, (UINT_PTR)hGameMenu, "Game");
+
+    AppendGameNewSubMenu(hGameMenu);
+    AppendMenu(hGameMenu, MF_SEPARATOR, NULL, NULL);
+    AppendMenu(hGameMenu, MF_STRING, NULL, "SaveSettings");
+}
+
+void AddMenus(HWND hWnd)
+{
+    hMenu = CreateMenu();
+
+    AppendGameSubMenu(hMenu);
+
+    AppendMenu(hMenu, MF_STRING, PARAM_MENU_EXIT, "Exit");
+
+    SetMenu(hWnd, hMenu);
+}
+/////////////////////////////////////////////////////////////////////
+///////////////////////////MENU//////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+
+
+
+
+
+void HandleWmCommand(WPARAM wParam){
+    switch(wParam)
+    {
+        case PARAM_MENU_EXIT:
+            PostQuitMessage (0);
+            break;
+    }
+}
+
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)                  /* handle the messages */
     {
+        case WM_COMMAND:
+            HandleWmCommand(wParam);
+            break;
+        case WM_CREATE:
+            AddMenus(hwnd);
+            break;
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
             break;
