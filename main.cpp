@@ -78,9 +78,22 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
 }
 
 
-
-
-
+/////////////////////////////////////////////////////////////////////
+///////////////////////////GameMap///////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+void AppendGameStatusRibbon(HWND hParentWnd){
+    CreateWindowW(L"static", L"Test text", WS_VISIBLE | WS_CHILD, 0, 0, 1000, 30, hParentWnd, NULL, NULL, NULL);
+}
+void AddGameMap(HWND hParentWnd){
+    AppendGameStatusRibbon(hParentWnd);
+    CreateWindowW(L"button", L"Test button", WS_VISIBLE | WS_CHILD, 500, 500, 100, 50, hParentWnd, (HMENU)4, NULL, NULL);
+}
+/////////////////////////////////////////////////////////////////////
+///////////////////////////GameMap///////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////MENU//////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
@@ -139,6 +152,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             break;
         case WM_CREATE:
             AddMenus(hwnd);
+            AddGameMap(hwnd);
             break;
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
