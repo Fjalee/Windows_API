@@ -77,9 +77,21 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     return messages.wParam;
 }
 
+void AppendGameSubMenu(HMENU hParentMenu)
+{
+    HMENU hGameMenu = CreateMenu();
+    AppendMenu(hParentMenu, MF_POPUP, (UINT_PTR)hGameMenu, "Game");
+
+    AppendMenu(hGameMenu, MF_STRING, NULL, "New");
+    AppendMenu(hGameMenu, MF_SEPARATOR, NULL, NULL);
+    AppendMenu(hGameMenu, MF_STRING, NULL, "SaveSettings");
+}
+
 void AddMenu(HWND hWnd)
 {
     hMenu = CreateMenu();
+
+    AppendGameSubMenu(hMenu);
 
     AppendMenu(hMenu, MF_STRING, PARAM_MENU_EXIT, "Exit");
 
