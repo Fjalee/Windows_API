@@ -7,6 +7,8 @@
 #include <tchar.h>
 #include <windows.h>
 
+#define PARAM_MENU_EXIT 1
+
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 
@@ -79,15 +81,27 @@ void AddMenu(HWND hWnd)
 {
     hMenu = CreateMenu();
 
-    AppendMenu(hMenu, MF_STRING, NULL, "Test");
+    AppendMenu(hMenu, MF_STRING, PARAM_MENU_EXIT, "Exit");
 
     SetMenu(hWnd, hMenu);
+}
+
+void HandleWmCommand(WPARAM wParam){
+    switch(wParam)
+    {
+        case PARAM_MENU_EXIT:
+            PostQuitMessage (0);
+            break;
+    }
 }
 
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)                  /* handle the messages */
     {
+        case WM_COMMAND:
+            HandleWmCommand(wParam);
+            break;
         case WM_CREATE:
             AddMenu(hwnd);
             break;
