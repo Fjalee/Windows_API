@@ -78,6 +78,12 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
 }
 
 
+
+
+
+/////////////////////////////////////////////////////////////////////
+///////////////////////////MENU//////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
 void AppendGameNewSubMenu(HMENU hParentMenu)
 {
     HMENU hGameNewMenu = CreateMenu();
@@ -97,7 +103,7 @@ void AppendGameSubMenu(HMENU hParentMenu)
     AppendMenu(hGameMenu, MF_STRING, NULL, "SaveSettings");
 }
 
-void AddMenu(HWND hWnd)
+void AddMenus(HWND hWnd)
 {
     hMenu = CreateMenu();
 
@@ -107,6 +113,13 @@ void AddMenu(HWND hWnd)
 
     SetMenu(hWnd, hMenu);
 }
+/////////////////////////////////////////////////////////////////////
+///////////////////////////MENU//////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+
+
+
+
 
 void HandleWmCommand(WPARAM wParam){
     switch(wParam)
@@ -125,7 +138,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             HandleWmCommand(wParam);
             break;
         case WM_CREATE:
-            AddMenu(hwnd);
+            AddMenus(hwnd);
             break;
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
