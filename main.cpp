@@ -6,8 +6,14 @@
 
 #include <tchar.h>
 #include <windows.h>
+#include <string>
+#include <fstream>
+#include <sstream>
 
 #define PARAM_MENU_EXIT 1
+#define TEST 2
+
+#define RIBON_HEIGHT 30
 
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
@@ -16,6 +22,7 @@ LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
 
 HMENU hMenu;
+int playerScore = 0;
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
@@ -77,16 +84,38 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     return messages.wParam;
 }
 
+void testFilePrint(std::string s)
+{
+    std::ofstream MyFile("test.txt");
+    MyFile << s;
+    MyFile.close();
+}
 
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////GameMap///////////////////////////////////
 /////////////////////////////////////////////////////////////////////
-void AppendGameStatusRibbon(HWND hParentWnd){
-    CreateWindowW(L"static", L"Test text", WS_VISIBLE | WS_CHILD, 0, 0, 1000, 30, hParentWnd, NULL, NULL, NULL);
+void AppendRibbonStatsElement(HWND hRibon, std::string text, int number, int x)
+{
+    std::string elString = text;
+    elString += std::to_string(number);
+
+    std::wstring elWString = std::wstring(elString.begin(), elString.end());
+    CreateWindowW(L"static", elWString.c_str(), WS_VISIBLE | WS_CHILD, x, 0, 100, RIBON_HEIGHT, hRibon, NULL, NULL, NULL);
 }
+
+void AppendGameStatusRibbon(HWND hParentWnd){
+    int currLen = 0;
+    HWND hRibon = CreateWindowW(L"static", L"", WS_VISIBLE | WS_CHILD, 0, 0, 1000, RIBON_HEIGHT, hParentWnd, NULL, NULL, NULL);
+
+    AppendRibbonStatsElement(hRibon, "Score: ", 0, currLen);
+
+    currLen += 200;
+    AppendRibbonStatsElement(hRibon, "Speed: ", 0, currLen);
+}
+
 void AddGameMap(HWND hParentWnd){
     AppendGameStatusRibbon(hParentWnd);
-    CreateWindowW(L"button", L"Test button", WS_VISIBLE | WS_CHILD, 500, 500, 100, 50, hParentWnd, (HMENU)4, NULL, NULL);
+    CreateWindowW(L"button", L"Test button", WS_VISIBLE | WS_CHILD, 500, 500, 100, 50, hParentWnd, (HMENU)TEST, NULL, NULL);
 }
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////GameMap///////////////////////////////////
@@ -139,6 +168,11 @@ void HandleWmCommand(WPARAM wParam){
     {
         case PARAM_MENU_EXIT:
             PostQuitMessage (0);
+            break;
+        case TEST:
+            DWORD currentTime = GetTickCount();
+            std::string t = ConvertToString(currentTime);
+            testFilePrint(t);
             break;
     }
 }
