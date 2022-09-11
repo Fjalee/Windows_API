@@ -134,6 +134,12 @@ void AppendGameStatusRibbon(HWND hParentWnd){
     currX += (length+(100));
     hSpeed = AppendRibbonStatsElement(hRibon, "Speed: ", 0, currX, length);
 }
+
+void ReloadGameRibbon()
+{
+    SetRibbonStatsElementText(hScore, "Score: ", playerScore);
+    SetRibbonStatsElementText(hSpeed, "Speed: ", playerSpeed);
+}
 /////////////////////////////////////////////////////////////////////
 //////////////////////////GameRibbon/////////////////////////////////
 /////////////////////////////////////////////////////////////////////
@@ -201,8 +207,7 @@ void HandleWmCommand(WPARAM wParam){
             break;
         case TEST:
             playerScore += 1;
-            SetRibbonStatsElementText(hScore, "Score: ", playerScore);
-            SetRibbonStatsElementText(hScore, "Speed: ", playerSpeed);
+            ReloadGameRibbon();
             /*DWORD currentTime = GetTickCount();
             std::string t = ConvertToString(currentTime);
             testFilePrint(t);*/
