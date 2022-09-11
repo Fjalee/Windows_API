@@ -22,7 +22,10 @@ LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
 
 HMENU hMenu;
+HWND hScore;
+HWND hSpeed;
 int playerScore = 0;
+int playerSpeed = 0;
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
@@ -92,27 +95,54 @@ void testFilePrint(std::string s)
 }
 
 /////////////////////////////////////////////////////////////////////
-///////////////////////////GameMap///////////////////////////////////
+//////////////////////////GameRibbon/////////////////////////////////
 /////////////////////////////////////////////////////////////////////
-void AppendRibbonStatsElement(HWND hRibon, std::string text, int number, int x)
+HWND AppendRibbonStatsElement(HWND hRibon, std::string text, int number, int x, int lenght)
 {
     std::string elString = text;
     elString += std::to_string(number);
 
     std::wstring elWString = std::wstring(elString.begin(), elString.end());
-    CreateWindowW(L"static", elWString.c_str(), WS_VISIBLE | WS_CHILD, x, 0, 100, RIBON_HEIGHT, hRibon, NULL, NULL, NULL);
+    HWND h = CreateWindowW(L"static", elWString.c_str(), WS_VISIBLE | WS_CHILD, x, 0, lenght, RIBON_HEIGHT, hRibon, NULL, NULL, NULL);
+    return h;
+}
+
+void SetRibbonStatsElementText(HWND handler, std::string text, int number)
+{
+    std::string elString = text;
+    elString += std::to_string(number);
+
+    std::wstring elWString = std::wstring(elString.begin(), elString.end());
+    SetWindowTextW(handler, elWString.c_str());
+}
+
+std::string ConvertToString(DWORD value)
+{
+    std::stringstream ss;
+    ss << value;
+    return ss.str();
 }
 
 void AppendGameStatusRibbon(HWND hParentWnd){
-    int currLen = 0;
+    int currX = 0;
+    int length = 0;
     HWND hRibon = CreateWindowW(L"static", L"", WS_VISIBLE | WS_CHILD, 0, 0, 1000, RIBON_HEIGHT, hParentWnd, NULL, NULL, NULL);
 
-    AppendRibbonStatsElement(hRibon, "Score: ", 0, currLen);
+    length = 200;
+    hScore = AppendRibbonStatsElement(hRibon, "Score: ", 0, currX, length);
 
-    currLen += 200;
-    AppendRibbonStatsElement(hRibon, "Speed: ", 0, currLen);
+    currX += (length+(100));
+    hSpeed = AppendRibbonStatsElement(hRibon, "Speed: ", 0, currX, length);
 }
-
+/////////////////////////////////////////////////////////////////////
+//////////////////////////GameRibbon/////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
+/////////////////////////////////////////////////////////////////////
+///////////////////////////GameMap///////////////////////////////////
+/////////////////////////////////////////////////////////////////////
 void AddGameMap(HWND hParentWnd){
     AppendGameStatusRibbon(hParentWnd);
     CreateWindowW(L"button", L"Test button", WS_VISIBLE | WS_CHILD, 500, 500, 100, 50, hParentWnd, (HMENU)TEST, NULL, NULL);
@@ -170,9 +200,12 @@ void HandleWmCommand(WPARAM wParam){
             PostQuitMessage (0);
             break;
         case TEST:
-            DWORD currentTime = GetTickCount();
+            playerScore += 1;
+            SetRibbonStatsElementText(hScore, "Score: ", playerScore);
+            SetRibbonStatsElementText(hScore, "Speed: ", playerSpeed);
+            /*DWORD currentTime = GetTickCount();
             std::string t = ConvertToString(currentTime);
-            testFilePrint(t);
+            testFilePrint(t);*/
             break;
     }
 }
