@@ -9,14 +9,19 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include <deque>
 #include <sstream>
 #include <iomanip>
+#include <cstdlib>
+#include <tuple>
+#include <algorithm>
 
 #define PARAM_MENU_EXIT 1
 #define CLICK_PAD_CLICKED 2
 #define TEST 3000
 
 #define RIBON_HEIGHT 30
+#define EXTRA_HEIGHT_FOR_SCREEN 50
 
 #define COLORREF2RGB(Color) (Color & 0xff00) | ((Color >> 16) & 0xff) \
                                  | ((Color << 16) & 0xff0000)
@@ -36,14 +41,15 @@ int playerSpeed = 0;
 DWORD startTime;
 
 int screenWidth = 1000;
-int screenHeight = 700 + RIBON_HEIGHT;
+int screenHeight = 700;
 int mapXClickPadsCount = 4;
 int mapYClickPadsCount = 4;
 int clickPadsVisible = 3;
 int clickPadWidth = screenWidth / mapXClickPadsCount;
-int clickPadHeight = screenHeight / mapXClickPadsCount;
+int clickPadHeight = screenHeight / mapYClickPadsCount;
 
-std::vector<HBITMAP> clickPadCoords;
+std::vector<std::tuple <int, int>> allClickPadsPos;
+std::deque<int> visibleClickPadsIds;
 std::vector<HBITMAP> clickPadImages;
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
@@ -83,7 +89,7 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
            CW_USEDEFAULT,       /* Windows decides the position */
            CW_USEDEFAULT,       /* where the window ends up on the screen */
            screenWidth,         /* The programs width */
-           screenHeight,        /* and height in pixels */
+           screenHeight + EXTRA_HEIGHT_FOR_SCREEN + RIBON_HEIGHT,        /* and height in pixels */
            HWND_DESKTOP,        /* The window is a child-window to desktop */
            NULL,                /* No menu */
            hThisInstance,       /* Program Instance handler */
@@ -269,7 +275,7 @@ double GetClicksPerMinute()
 void AppendGameStatusRibbon(HWND hParentWnd){
     int currX = 0;
     int length = 0;
-    HWND hRibon = CreateWindowW(L"static", L"", WS_VISIBLE | WS_CHILD, 0, screenHeight-RIBON_HEIGHT-50, screenWidth, RIBON_HEIGHT, hParentWnd, NULL, NULL, NULL);
+    HWND hRibon = CreateWindowW(L"static", L"", WS_VISIBLE | WS_CHILD, 0, screenHeight, screenWidth, RIBON_HEIGHT, hParentWnd, NULL, NULL, NULL);
 
     length = 200;
     hScore = AppendRibbonStatsElement(hRibon, "Score: ", 0, currX, length);
@@ -331,26 +337,83 @@ void CreateClickPadImages(int count)
     }
 }
 
-void GenerateRandomPositionsForClickPads()
+void SetClickPadsPossiblePositions()
 {
+    for(int i=0; i<mapXClickPadsCount; i++)
+    {
+        for(int j=0; j<mapYClickPadsCount; j++)
+        {
+            std::tuple <int, int> pos = std::make_tuple(clickPadWidth*i, clickPadHeight*j);
+            allClickPadsPos.push_back(pos);
+        }
+    }
+}
 
+int GetRandomCurrentlyNotVisibleClickPadId()
+{
+    int res;
+    int x = 0;
 
+    int maxClickPadsCount = mapXClickPadsCount * mapYClickPadsCount;
+    while(true)
+    {
+        res = rand() % maxClickPadsCount + 0;   // range 0-(maxClickPadsCount-1)
+
+        if (std::find(visibleClickPadsIds.begin(), visibleClickPadsIds.end(), res) == visibleClickPadsIds.end())
+        {
+            break;
+        }
+
+        x++;
+        testFilePrint(std::to_string(x));
+    }
+    return res;
+}
+
+void InitializeRandomPositionsForClickPads()
+{
+    for(int i=0; i<clickPadsVisible; i++)
+    {
+        int newClickPadId = GetRandomCurrentlyNotVisibleClickPadId();
+        visibleClickPadsIds.push_back(newClickPadId);
+    }
+}
+
+void AppendInitClickPads(HWND hParentWnd)
+{
+    std::ofstream MyFile("test.txt");
+    for(int i=0; i<clickPadsVisible; i++)
+    {
+        int currId = visibleClickPadsIds.at(i);
+        std::tuple<int, int> currPos = allClickPadsPos[currId];
+        int currX = std::get<0>(currPos);
+        int currY = std::get<1>(currPos);
+
+        if (i == 0)
+        {
+            HWND hButton = CreateWindowW(L"button", NULL, WS_VISIBLE | WS_CHILD | BS_BITMAP, currX, currY, clickPadWidth, clickPadHeight, hParentWnd, (HMENU)CLICK_PAD_CLICKED, NULL, NULL);
+            SendMessageW(hButton, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hClickPadImage);
+        }
+        else
+        {
+            HWND t = CreateWindowW(L"Static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP, currX, currY, clickPadWidth, clickPadHeight, hParentWnd, NULL, NULL, NULL);
+            SendMessageW(t, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)clickPadImages[i]);
+        }
+
+        MyFile << std::to_string(currX) << "   " << std::to_string(currY) << "\n";
+    }
+    MyFile.close();
 }
 
 void AddGameMap(HWND hParentWnd){
     AppendGameStatusRibbon(hParentWnd);
 
-    int tempCount = 4;
-    CreateClickPadImages(tempCount);
+    CreateClickPadImages(clickPadsVisible);
 
-    HWND hButton = CreateWindowW(L"button", NULL, WS_VISIBLE | WS_CHILD | BS_BITMAP, 0, 0, clickPadWidth, clickPadHeight, hParentWnd, (HMENU)CLICK_PAD_CLICKED, NULL, NULL);
-    //SendMessageW(hButton, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hClickPadImage);
+    SetClickPadsPossiblePositions();
 
-    for(int i=1; i<tempCount; i++)
-    {
-        HWND t = CreateWindowW(L"Static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP, clickPadWidth*(i+1), clickPadHeight, clickPadWidth, clickPadHeight, hParentWnd, NULL, NULL, NULL);
-        SendMessageW(t, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)clickPadImages[i]);
-    }
+    InitializeRandomPositionsForClickPads();
+    AppendInitClickPads(hParentWnd);
 
     //hClickPad = CreateWindowW(L"Static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP, 50, 50, 100, 100, hParentWnd, NULL, NULL, NULL);
     //SendMessageW(hClickPad, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hClickPadImage);
@@ -428,7 +491,6 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             LoadImages();
             AddMenus(hwnd);
             AddGameMap(hwnd);
-            GenerateRandomPositionsForClickPads();
             break;
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
