@@ -24,8 +24,10 @@ TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
 HMENU hMenu;
 HWND hScore;
 HWND hSpeed;
+
 int playerScore = 0;
 int playerSpeed = 0;
+DWORD startTime;
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
@@ -116,11 +118,32 @@ void SetRibbonStatsElementText(HWND handler, std::string text, int number)
     SetWindowTextW(handler, elWString.c_str());
 }
 
-std::string ConvertToString(DWORD value)
+std::string DWORDToString(DWORD value)
 {
     std::stringstream ss;
     ss << value;
     return ss.str();
+}
+
+std::string doubleToString(double value)
+{
+    std::stringstream ss;
+    ss << value;
+    return ss.str();
+}
+
+double GetPassedTimeInSeconds()
+{
+    DWORD currentTime = GetTickCount();
+    DWORD passedSecondsDWORD = (currentTime - startTime)/1000;
+    return (double)passedSecondsDWORD;
+}
+
+double GetClicksPerMinute()
+{
+    double minutesPassed = GetPassedTimeInSeconds() / 60;
+    double result = playerScore / minutesPassed;
+    return result;
 }
 
 void AppendGameStatusRibbon(HWND hParentWnd){
@@ -138,7 +161,7 @@ void AppendGameStatusRibbon(HWND hParentWnd){
 void ReloadGameRibbon()
 {
     SetRibbonStatsElementText(hScore, "Score: ", playerScore);
-    SetRibbonStatsElementText(hSpeed, "Speed: ", playerSpeed);
+    SetRibbonStatsElementText(hSpeed, "Speed: ", (int)GetClicksPerMinute());
 }
 /////////////////////////////////////////////////////////////////////
 //////////////////////////GameRibbon/////////////////////////////////
@@ -208,9 +231,6 @@ void HandleWmCommand(WPARAM wParam){
         case TEST:
             playerScore += 1;
             ReloadGameRibbon();
-            /*DWORD currentTime = GetTickCount();
-            std::string t = ConvertToString(currentTime);
-            testFilePrint(t);*/
             break;
     }
 }
@@ -223,6 +243,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             HandleWmCommand(wParam);
             break;
         case WM_CREATE:
+            startTime = GetTickCount();
             AddMenus(hwnd);
             AddGameMap(hwnd);
             break;
