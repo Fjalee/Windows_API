@@ -26,6 +26,11 @@
 #define COLORREF2RGB(Color) (Color & 0xff00) | ((Color >> 16) & 0xff) \
                                  | ((Color << 16) & 0xff0000)
 
+struct ClickPad
+{
+    int x, y, id;
+};
+
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 
@@ -49,8 +54,8 @@ int clickPadWidth = screenWidth / mapXClickPadsCount;
 int clickPadHeight = screenHeight / mapYClickPadsCount;
 
 std::vector<std::tuple <int, int>> allClickPadsPos;
-std::deque<int> visibleClickPadsIds;
 std::vector<HBITMAP> clickPadImages;
+std::deque<ClickPad> currClickPads;
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
@@ -349,6 +354,19 @@ void SetClickPadsPossiblePositions()
     }
 }
 
+bool IsClickPadExistCurrently(int id)
+{
+    for(int i=0; i<clickPadsVisible; i++)
+    {
+        if(currClickPads[i].id == id)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 int GetRandomCurrentlyNotVisibleClickPadId()
 {
     int res;
@@ -359,35 +377,42 @@ int GetRandomCurrentlyNotVisibleClickPadId()
     {
         res = rand() % maxClickPadsCount + 0;   // range 0-(maxClickPadsCount-1)
 
-        if (std::find(visibleClickPadsIds.begin(), visibleClickPadsIds.end(), res) == visibleClickPadsIds.end())
+        if (!IsClickPadExistCurrently(res))
         {
             break;
         }
 
         x++;
-        testFilePrint(std::to_string(x));
     }
     return res;
+}
+
+void PushNewClickPad()
+{
+    int id = GetRandomCurrentlyNotVisibleClickPadId();
+    std::tuple<int, int> pos = allClickPadsPos[id];
+
+    int x = std::get<0>(pos);
+    int y = std::get<1>(pos);
+
+    struct ClickPad newClickPad = {x, y, id};
+    currClickPads.push_back(newClickPad);
 }
 
 void InitializeRandomPositionsForClickPads()
 {
     for(int i=0; i<clickPadsVisible; i++)
     {
-        int newClickPadId = GetRandomCurrentlyNotVisibleClickPadId();
-        visibleClickPadsIds.push_back(newClickPadId);
+        PushNewClickPad();
     }
 }
 
 void AppendInitClickPads(HWND hParentWnd)
 {
-    std::ofstream MyFile("test.txt");
     for(int i=0; i<clickPadsVisible; i++)
     {
-        int currId = visibleClickPadsIds.at(i);
-        std::tuple<int, int> currPos = allClickPadsPos[currId];
-        int currX = std::get<0>(currPos);
-        int currY = std::get<1>(currPos);
+        int currX = currClickPads[i].x;
+        int currY = currClickPads[i].y;
 
         if (i == 0)
         {
@@ -399,10 +424,7 @@ void AppendInitClickPads(HWND hParentWnd)
             HWND t = CreateWindowW(L"Static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP, currX, currY, clickPadWidth, clickPadHeight, hParentWnd, NULL, NULL, NULL);
             SendMessageW(t, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)clickPadImages[i]);
         }
-
-        MyFile << std::to_string(currX) << "   " << std::to_string(currY) << "\n";
-    }
-    MyFile.close();
+    };
 }
 
 void AddGameMap(HWND hParentWnd){
