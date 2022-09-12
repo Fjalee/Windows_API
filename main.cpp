@@ -35,10 +35,15 @@ int playerScore = 0;
 int playerSpeed = 0;
 DWORD startTime;
 
+int screenWidth = 1000;
+int screenHeight = 700 + RIBON_HEIGHT;
 int mapXClickPadsCount = 4;
 int mapYClickPadsCount = 4;
 int clickPadsVisible = 3;
+int clickPadWidth = screenWidth / mapXClickPadsCount;
+int clickPadHeight = screenHeight / mapXClickPadsCount;
 
+std::vector<HBITMAP> clickPadCoords;
 std::vector<HBITMAP> clickPadImages;
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
@@ -77,8 +82,8 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
            WS_OVERLAPPEDWINDOW, /* default window */
            CW_USEDEFAULT,       /* Windows decides the position */
            CW_USEDEFAULT,       /* where the window ends up on the screen */
-           1000,                 /* The programs width */
-           700,                 /* and height in pixels */
+           screenWidth,         /* The programs width */
+           screenHeight,        /* and height in pixels */
            HWND_DESKTOP,        /* The window is a child-window to desktop */
            NULL,                /* No menu */
            hThisInstance,       /* Program Instance handler */
@@ -264,7 +269,7 @@ double GetClicksPerMinute()
 void AppendGameStatusRibbon(HWND hParentWnd){
     int currX = 0;
     int length = 0;
-    HWND hRibon = CreateWindowW(L"static", L"", WS_VISIBLE | WS_CHILD, 0, 0, 1000, RIBON_HEIGHT, hParentWnd, NULL, NULL, NULL);
+    HWND hRibon = CreateWindowW(L"static", L"", WS_VISIBLE | WS_CHILD, 0, screenHeight-RIBON_HEIGHT-50, screenWidth, RIBON_HEIGHT, hParentWnd, NULL, NULL, NULL);
 
     length = 200;
     hScore = AppendRibbonStatsElement(hRibon, "Score: ", 0, currX, length);
@@ -287,9 +292,10 @@ void ReloadGameRibbon()
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////GameMap///////////////////////////////////
 /////////////////////////////////////////////////////////////////////
+
 void LoadImages()
 {
-    hClickPadImage = (HBITMAP)LoadImageW(NULL, L".\\clickPad.bmp", IMAGE_BITMAP, 55, 55, LR_LOADFROMFILE);
+    hClickPadImage = (HBITMAP)LoadImageW(NULL, L".\\clickPad.bmp", IMAGE_BITMAP, clickPadWidth, clickPadHeight, LR_LOADFROMFILE);
 }
 
 COLORREF GetDarkenedRed(int shade)
@@ -325,18 +331,24 @@ void CreateClickPadImages(int count)
     }
 }
 
+void GenerateRandomPositionsForClickPads()
+{
+
+
+}
+
 void AddGameMap(HWND hParentWnd){
     AppendGameStatusRibbon(hParentWnd);
 
-    int tempCount = 10;
+    int tempCount = 4;
     CreateClickPadImages(tempCount);
 
-    HWND hButton = CreateWindowW(L"button", NULL, WS_VISIBLE | WS_CHILD | BS_BITMAP, 50, 50, 50, 50, hParentWnd, (HMENU)CLICK_PAD_CLICKED, NULL, NULL);
+    HWND hButton = CreateWindowW(L"button", NULL, WS_VISIBLE | WS_CHILD | BS_BITMAP, 0, 0, clickPadWidth, clickPadHeight, hParentWnd, (HMENU)CLICK_PAD_CLICKED, NULL, NULL);
     //SendMessageW(hButton, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hClickPadImage);
 
     for(int i=1; i<tempCount; i++)
     {
-        HWND t = CreateWindowW(L"Static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP, 50*(i+1), 50, 50, 50, hParentWnd, NULL, NULL, NULL);
+        HWND t = CreateWindowW(L"Static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP, clickPadWidth*(i+1), clickPadHeight, clickPadWidth, clickPadHeight, hParentWnd, NULL, NULL, NULL);
         SendMessageW(t, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)clickPadImages[i]);
     }
 
@@ -416,6 +428,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             LoadImages();
             AddMenus(hwnd);
             AddGameMap(hwnd);
+            GenerateRandomPositionsForClickPads();
             break;
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
