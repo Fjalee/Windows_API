@@ -35,6 +35,10 @@ int playerScore = 0;
 int playerSpeed = 0;
 DWORD startTime;
 
+int mapXClickPadsCount = 4;
+int mapYClickPadsCount = 4;
+int clickPadsVisible = 3;
+
 std::vector<HBITMAP> clickPadImages;
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
