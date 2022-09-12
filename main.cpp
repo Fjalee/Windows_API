@@ -8,7 +8,9 @@
 #include <windows.h>
 #include <string>
 #include <fstream>
+#include <vector>
 #include <sstream>
+#include <iomanip>
 
 #define PARAM_MENU_EXIT 1
 #define CLICK_PAD_CLICKED 2
@@ -32,6 +34,8 @@ HWND hScore, hSpeed, hClickPad;
 int playerScore = 0;
 int playerSpeed = 0;
 DWORD startTime;
+
+std::vector<HBITMAP> clickPadImages;
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
@@ -284,12 +288,56 @@ void LoadImages()
     hClickPadImage = (HBITMAP)LoadImageW(NULL, L".\\clickPad.bmp", IMAGE_BITMAP, 55, 55, LR_LOADFROMFILE);
 }
 
+COLORREF GetDarkenedRed(int shade)
+{
+    COLORREF res = 0x0000ff;
+    if (shade > 255)
+    {
+        shade = 255;
+    }
+    res -= shade;
+    return res;
+}
+
+COLORREF GetWhitenedRed(int shade)
+{
+    COLORREF res = 0x0000ff;
+    if (shade > 255)
+    {
+        shade = 255;
+    }
+    res += 65792 * shade;
+    return res;
+}
+
+void CreateClickPadImages(int count)
+{
+    int darkenByShade = (255 - 10) / count;
+    for(int i=0; i<count; i++)
+    {
+        COLORREF newClickPadImageColor = GetDarkenedRed(darkenByShade * i);
+        HBITMAP newClickPadImage = ReplaceColor(hClickPadImage, 0x0000ff, newClickPadImageColor, NULL);
+        clickPadImages.push_back(newClickPadImage);
+    }
+}
+
 void AddGameMap(HWND hParentWnd){
     AppendGameStatusRibbon(hParentWnd);
 
-    hClickPadImage = ReplaceColor(hClickPadImage,0x0000ff,0x8900ff, NULL); // replace blue by green
-    HWND hButton = CreateWindowW(L"button", NULL, WS_VISIBLE | WS_CHILD | BS_BITMAP, 500, 500, 50, 50, hParentWnd, (HMENU)CLICK_PAD_CLICKED, NULL, NULL);
-    SendMessageW(hButton, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hClickPadImage);
+    int tempCount = 10;
+    CreateClickPadImages(tempCount);
+
+    HWND hButton = CreateWindowW(L"button", NULL, WS_VISIBLE | WS_CHILD | BS_BITMAP, 50, 50, 50, 50, hParentWnd, (HMENU)CLICK_PAD_CLICKED, NULL, NULL);
+    //SendMessageW(hButton, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hClickPadImage);
+
+    for(int i=1; i<tempCount; i++)
+    {
+        HWND t = CreateWindowW(L"Static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP, 50*(i+1), 50, 50, 50, hParentWnd, NULL, NULL, NULL);
+        SendMessageW(t, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)clickPadImages[i]);
+    }
+
+    //hClickPad = CreateWindowW(L"Static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP, 50, 50, 100, 100, hParentWnd, NULL, NULL, NULL);
+    //SendMessageW(hClickPad, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hClickPadImage);
 }
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////GameMap///////////////////////////////////
