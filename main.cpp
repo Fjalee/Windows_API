@@ -142,7 +142,13 @@ double GetPassedTimeInSeconds()
 
 double GetClicksPerMinute()
 {
-    double minutesPassed = GetPassedTimeInSeconds() / 60;
+    double secsPassed = GetPassedTimeInSeconds();
+    if(secsPassed < 1)
+    {
+        return 99999.0;
+    }
+
+    double minutesPassed = secsPassed / 60;
     double result = playerScore / minutesPassed;
     return result;
 }
