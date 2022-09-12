@@ -6,8 +6,15 @@
 
 #include <tchar.h>
 #include <windows.h>
+#include <string>
+#include <fstream>
+#include <sstream>
 
 #define PARAM_MENU_EXIT 1
+#define CLICK_PAD_CLICKED 2
+#define TEST 3000
+
+#define RIBON_HEIGHT 30
 
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
@@ -16,6 +23,12 @@ LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
 
 HMENU hMenu;
+HWND hScore;
+HWND hSpeed;
+
+int playerScore = 0;
+int playerSpeed = 0;
+DWORD startTime;
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
@@ -77,10 +90,105 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     return messages.wParam;
 }
 
+void testFilePrint(std::string s)
+{
+    std::ofstream MyFile("test.txt");
+    MyFile << s;
+    MyFile.close();
+}
 
+/////////////////////////////////////////////////////////////////////
+//////////////////////////GameRibbon/////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+HWND AppendRibbonStatsElement(HWND hRibon, std::string text, int number, int x, int lenght)
+{
+    std::string elString = text;
+    elString += std::to_string(number);
 
+    std::wstring elWString = std::wstring(elString.begin(), elString.end());
+    HWND h = CreateWindowW(L"static", elWString.c_str(), WS_VISIBLE | WS_CHILD, x, 0, lenght, RIBON_HEIGHT, hRibon, NULL, NULL, NULL);
+    return h;
+}
 
+void SetRibbonStatsElementText(HWND handler, std::string text, int number)
+{
+    std::string elString = text;
+    elString += std::to_string(number);
 
+    std::wstring elWString = std::wstring(elString.begin(), elString.end());
+    SetWindowTextW(handler, elWString.c_str());
+}
+
+std::string DWORDToString(DWORD value)
+{
+    std::stringstream ss;
+    ss << value;
+    return ss.str();
+}
+
+std::string doubleToString(double value)
+{
+    std::stringstream ss;
+    ss << value;
+    return ss.str();
+}
+
+double GetPassedTimeInSeconds()
+{
+    DWORD currentTime = GetTickCount();
+    DWORD passedSecondsDWORD = (currentTime - startTime)/1000;
+    return (double)passedSecondsDWORD;
+}
+
+double GetClicksPerMinute()
+{
+    double secsPassed = GetPassedTimeInSeconds();
+    if(secsPassed < 1)
+    {
+        return 99999.0;
+    }
+
+    double minutesPassed = secsPassed / 60;
+    double result = playerScore / minutesPassed;
+    return result;
+}
+
+void AppendGameStatusRibbon(HWND hParentWnd){
+    int currX = 0;
+    int length = 0;
+    HWND hRibon = CreateWindowW(L"static", L"", WS_VISIBLE | WS_CHILD, 0, 0, 1000, RIBON_HEIGHT, hParentWnd, NULL, NULL, NULL);
+
+    length = 200;
+    hScore = AppendRibbonStatsElement(hRibon, "Score: ", 0, currX, length);
+
+    currX += (length+(100));
+    hSpeed = AppendRibbonStatsElement(hRibon, "Speed: ", 0, currX, length);
+}
+
+void ReloadGameRibbon()
+{
+    SetRibbonStatsElementText(hScore, "Score: ", playerScore);
+    SetRibbonStatsElementText(hSpeed, "Speed: ", (int)GetClicksPerMinute());
+}
+/////////////////////////////////////////////////////////////////////
+//////////////////////////GameRibbon/////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
+/////////////////////////////////////////////////////////////////////
+///////////////////////////GameMap///////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+void AddGameMap(HWND hParentWnd){
+    AppendGameStatusRibbon(hParentWnd);
+    CreateWindowW(L"button", L"Test button", WS_VISIBLE | WS_CHILD, 500, 500, 100, 50, hParentWnd, (HMENU)CLICK_PAD_CLICKED, NULL, NULL);
+}
+/////////////////////////////////////////////////////////////////////
+///////////////////////////GameMap///////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////MENU//////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
@@ -127,6 +235,12 @@ void HandleWmCommand(WPARAM wParam){
         case PARAM_MENU_EXIT:
             PostQuitMessage (0);
             break;
+        case CLICK_PAD_CLICKED:
+            playerScore += 1;
+            ReloadGameRibbon();
+            break;
+        case TEST:
+            break;
     }
 }
 
@@ -138,7 +252,9 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             HandleWmCommand(wParam);
             break;
         case WM_CREATE:
+            startTime = GetTickCount();
             AddMenus(hwnd);
+            AddGameMap(hwnd);
             break;
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
