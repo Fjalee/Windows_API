@@ -11,7 +11,8 @@
 #include <sstream>
 
 #define PARAM_MENU_EXIT 1
-#define TEST 2
+#define CLICK_PAD_CLICKED 2
+#define TEST 3000
 
 #define RIBON_HEIGHT 30
 
@@ -174,7 +175,7 @@ void ReloadGameRibbon()
 /////////////////////////////////////////////////////////////////////
 void AddGameMap(HWND hParentWnd){
     AppendGameStatusRibbon(hParentWnd);
-    CreateWindowW(L"button", L"Test button", WS_VISIBLE | WS_CHILD, 500, 500, 100, 50, hParentWnd, (HMENU)TEST, NULL, NULL);
+    CreateWindowW(L"button", L"Test button", WS_VISIBLE | WS_CHILD, 500, 500, 100, 50, hParentWnd, (HMENU)CLICK_PAD_CLICKED, NULL, NULL);
 }
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////GameMap///////////////////////////////////
@@ -228,9 +229,11 @@ void HandleWmCommand(WPARAM wParam){
         case PARAM_MENU_EXIT:
             PostQuitMessage (0);
             break;
-        case TEST:
+        case CLICK_PAD_CLICKED:
             playerScore += 1;
             ReloadGameRibbon();
+            break;
+        case TEST:
             break;
     }
 }
