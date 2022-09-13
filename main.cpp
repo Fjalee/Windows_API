@@ -26,6 +26,8 @@
 #define COLORREF2RGB(Color) (Color & 0xff00) | ((Color >> 16) & 0xff) \
                                  | ((Color << 16) & 0xff0000)
 
+std::ofstream MyFile("test.txt");
+
 struct ClickPad
 {
     int x, y, id;
@@ -388,7 +390,7 @@ int GetRandomCurrentlyNotVisibleClickPadId()
     return res;
 }
 
-void PushNewClickPad(HWND hParentWnd)
+void PushBackNewClickPad(HWND hParentWnd)
 {
     int id = GetRandomCurrentlyNotVisibleClickPadId();
     std::tuple<int, int> pos = allClickPadsPos[id];
@@ -401,15 +403,27 @@ void PushNewClickPad(HWND hParentWnd)
     currClickPads.push_back(newClickPad);
 }
 
+void SwapFirstClickPadForButton(HWND hParentWnd)
+{
+    struct ClickPad fstClickPad = currClickPads.front();
+    currClickPads.pop_front();
+
+    DestroyWindow(fstClickPad.handler);
+
+    HWND handler = CreateWindowW(L"button", NULL, WS_VISIBLE | WS_CHILD | BS_BITMAP, fstClickPad.x, fstClickPad.y, clickPadWidth, clickPadHeight, hParentWnd, (HMENU)CLICK_PAD_CLICKED, NULL, NULL);
+    SendMessageW(handler, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)clickPadImages[0]);
+
+    struct ClickPad newClickPad = {fstClickPad.x, fstClickPad.y, fstClickPad.id, handler};
+    currClickPads.push_front(newClickPad);
+}
+
 void ReloadClickPadImagesAndHandlers(HWND hParentWnd)
 {
-    struct ClickPad fstClickPad = currClickPads.at(0);
-    fstClickPad.handler = CreateWindowW(L"button", NULL, WS_VISIBLE | WS_CHILD | BS_BITMAP, fstClickPad.x, fstClickPad.y, clickPadWidth, clickPadHeight, hParentWnd, (HMENU)CLICK_PAD_CLICKED, NULL, NULL);
-    SendMessageW(fstClickPad.handler, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)clickPadImages[0]);
+    SwapFirstClickPadForButton(hParentWnd);
 
-    for(int i=i; i<clickPadsVisible; i++)
+    for(int i=1; i<clickPadsVisible; i++)
     {
-        struct ClickPad clickPad = currClickPads[i];
+        struct ClickPad clickPad = currClickPads.at(i);
         SendMessageW(clickPad.handler, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)clickPadImages[i]);
     }
 }
@@ -418,40 +432,28 @@ void InitializeClickPads(HWND hParentWnd)
 {
     for(int i=0; i<clickPadsVisible; i++)
     {
-        PushNewClickPad(hParentWnd);
+        PushBackNewClickPad(hParentWnd);
     }
     ReloadClickPadImagesAndHandlers(hParentWnd);
-}
-
-void AppendInitClickPads(HWND hParentWnd)
-{
-    for(int i=0; i<clickPadsVisible; i++)
-    {
-        int currX = currClickPads[i].x;
-        int currY = currClickPads[i].y;
-
-        if (i == 0)
-        {
-            HWND hButton = CreateWindowW(L"button", NULL, WS_VISIBLE | WS_CHILD | BS_BITMAP, currX, currY, clickPadWidth, clickPadHeight, hParentWnd, (HMENU)CLICK_PAD_CLICKED, NULL, NULL);
-            SendMessageW(hButton, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hClickPadImage);
-        }
-        else
-        {
-            HWND t = CreateWindowW(L"Static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP, currX, currY, clickPadWidth, clickPadHeight, hParentWnd, NULL, NULL, NULL);
-            SendMessageW(t, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)clickPadImages[i]);
-        }
-    };
 }
 
 void AddGameMap(HWND hParentWnd){
     AppendGameStatusRibbon(hParentWnd);
 
     CreateClickPadImages(clickPadsVisible);
-
     SetClickPadsPossiblePositions();
 
     InitializeClickPads(hParentWnd);
-    AppendInitClickPads(hParentWnd);
+}
+
+void RemoveClickedClickPadAndPushNew(HWND hParentWnd)
+{
+    struct ClickPad clickPad = currClickPads.front();
+    DestroyWindow(clickPad.handler);
+
+    currClickPads.pop_front();
+    PushBackNewClickPad(hParentWnd);
+    ReloadClickPadImagesAndHandlers(hParentWnd);
 }
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////GameMap///////////////////////////////////
@@ -494,23 +496,22 @@ void AddMenus(HWND hWnd)
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////MENU//////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
-
-void HandleClickPadClick()
+void HandleClickPadClick(HWND hParentWnd)
 {
     playerScore += 1;
     ReloadGameRibbon();
 
-
+    RemoveClickedClickPadAndPushNew(hParentWnd);
 }
 
-void HandleWmCommand(WPARAM wParam){
+void HandleWmCommand(WPARAM wParam, HWND hParentWnd){
     switch(wParam)
     {
         case PARAM_MENU_EXIT:
             PostQuitMessage (0);
             break;
         case CLICK_PAD_CLICKED:
-            HandleClickPadClick();
+            HandleClickPadClick(hParentWnd);
             break;
         case TEST:
             break;
@@ -522,7 +523,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
     switch (message)                  /* handle the messages */
     {
         case WM_COMMAND:
-            HandleWmCommand(wParam);
+            HandleWmCommand(wParam, hwnd);
             break;
         case WM_CREATE:
             startTime = GetTickCount();
@@ -532,6 +533,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             break;
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
+            MyFile.close();
             break;
         default:                      /* for messages that we don't deal with */
             return DefWindowProc (hwnd, message, wParam, lParam);
