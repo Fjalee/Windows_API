@@ -8,13 +8,31 @@
 #include <windows.h>
 #include <string>
 #include <fstream>
+#include <vector>
+#include <deque>
 #include <sstream>
+#include <iomanip>
+#include <cstdlib>
+#include <tuple>
+#include <algorithm>
 
 #define PARAM_MENU_EXIT 1
 #define CLICK_PAD_CLICKED 2
 #define TEST 3000
 
 #define RIBON_HEIGHT 30
+#define EXTRA_HEIGHT_FOR_SCREEN 50
+
+#define COLORREF2RGB(Color) (Color & 0xff00) | ((Color >> 16) & 0xff) \
+                                 | ((Color << 16) & 0xff0000)
+
+std::ofstream MyFile("test.txt");
+
+struct ClickPad
+{
+    int x, y, id;
+    HWND handler;
+};
 
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
@@ -23,12 +41,24 @@ LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
 
 HMENU hMenu;
-HWND hScore;
-HWND hSpeed;
+HBITMAP hClickPadImage;
+HWND hScore, hSpeed, hClickPad;
 
 int playerScore = 0;
 int playerSpeed = 0;
 DWORD startTime;
+
+int screenWidth = 1000;
+int screenHeight = 700;
+int mapXClickPadsCount = 4;
+int mapYClickPadsCount = 4;
+int clickPadsVisible = 3;
+int clickPadWidth = screenWidth / mapXClickPadsCount;
+int clickPadHeight = screenHeight / mapYClickPadsCount;
+
+std::vector<std::tuple <int, int>> allClickPadsPos;
+std::vector<HBITMAP> clickPadImages;
+std::deque<ClickPad> currClickPads;
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
@@ -66,8 +96,8 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
            WS_OVERLAPPEDWINDOW, /* default window */
            CW_USEDEFAULT,       /* Windows decides the position */
            CW_USEDEFAULT,       /* where the window ends up on the screen */
-           1000,                 /* The programs width */
-           700,                 /* and height in pixels */
+           screenWidth,         /* The programs width */
+           screenHeight + EXTRA_HEIGHT_FOR_SCREEN + RIBON_HEIGHT,        /* and height in pixels */
            HWND_DESKTOP,        /* The window is a child-window to desktop */
            NULL,                /* No menu */
            hThisInstance,       /* Program Instance handler */
@@ -95,6 +125,103 @@ void testFilePrint(std::string s)
     std::ofstream MyFile("test.txt");
     MyFile << s;
     MyFile.close();
+}
+
+
+
+//-------------------------------------------------------------------------------
+// hBmp         : Source Bitmap
+// cOldColor : Color to replace in hBmp
+// cNewColor : Color used for replacement
+// hBmpDC    : DC of hBmp ( default NULL ) could be NULL if hBmp is not selected
+//
+// Retcode   : HBITMAP of the modified bitmap or NULL for errors
+//-------------------------------------------------------------------------------
+HBITMAP ReplaceColor(HBITMAP hBmp,COLORREF cOldColor,COLORREF cNewColor,HDC hBmpDC)
+{
+    HBITMAP RetBmp=NULL;
+    if (hBmp)
+    {
+        HDC BufferDC=CreateCompatibleDC(NULL);    // DC for Source Bitmap
+        if (BufferDC)
+        {
+            HBITMAP hTmpBitmap = (HBITMAP) NULL;
+            if (hBmpDC)
+                if (hBmp == (HBITMAP)GetCurrentObject(hBmpDC, OBJ_BITMAP))
+            {
+                hTmpBitmap = CreateBitmap(1, 1, 1, 1, NULL);
+                SelectObject(hBmpDC, hTmpBitmap);
+            }
+
+            HGDIOBJ PreviousBufferObject=SelectObject(BufferDC,hBmp);
+            // here BufferDC contains the bitmap
+
+            HDC DirectDC=CreateCompatibleDC(NULL); // DC for working
+            if (DirectDC)
+            {
+                // Get bitmap size
+                BITMAP bm;
+                GetObject(hBmp, sizeof(bm), &bm);
+
+                // create a BITMAPINFO with minimal initilisation
+                // for the CreateDIBSection
+                BITMAPINFO RGB32BitsBITMAPINFO;
+                ZeroMemory(&RGB32BitsBITMAPINFO,sizeof(BITMAPINFO));
+                RGB32BitsBITMAPINFO.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);
+                RGB32BitsBITMAPINFO.bmiHeader.biWidth=bm.bmWidth;
+                RGB32BitsBITMAPINFO.bmiHeader.biHeight=bm.bmHeight;
+                RGB32BitsBITMAPINFO.bmiHeader.biPlanes=1;
+                RGB32BitsBITMAPINFO.bmiHeader.biBitCount=32;
+
+                // pointer used for direct Bitmap pixels access
+                UINT * ptPixels;
+
+                HBITMAP DirectBitmap = CreateDIBSection(DirectDC,
+                                       (BITMAPINFO *)&RGB32BitsBITMAPINFO,
+                                       DIB_RGB_COLORS,
+                                       (void **)&ptPixels,
+                                       NULL, 0);
+                if (DirectBitmap)
+                {
+                    // here DirectBitmap!=NULL so ptPixels!=NULL no need to test
+                    HGDIOBJ PreviousObject=SelectObject(DirectDC, DirectBitmap);
+                    BitBlt(DirectDC,0,0,
+                                   bm.bmWidth,bm.bmHeight,
+                                   BufferDC,0,0,SRCCOPY);
+
+                       // here the DirectDC contains the bitmap
+
+                    // Convert COLORREF to RGB (Invert RED and BLUE)
+                    cOldColor=COLORREF2RGB(cOldColor);
+                    cNewColor=COLORREF2RGB(cNewColor);
+
+                    // After all the inits we can do the job : Replace Color
+                    for (int i=((bm.bmWidth*bm.bmHeight)-1);i>=0;i--)
+                    {
+                        if (ptPixels[i]==cOldColor) ptPixels[i]=cNewColor;
+                    }
+                    // little clean up
+                    // Don't delete the result of SelectObject because it's
+                    // our modified bitmap (DirectBitmap)
+                       SelectObject(DirectDC,PreviousObject);
+
+                    // finish
+                    RetBmp=DirectBitmap;
+                }
+                // clean up
+                DeleteDC(DirectDC);
+            }
+            if (hTmpBitmap)
+            {
+                SelectObject(hBmpDC, hBmp);
+                DeleteObject(hTmpBitmap);
+            }
+            SelectObject(BufferDC,PreviousBufferObject);
+            // BufferDC is now useless
+            DeleteDC(BufferDC);
+        }
+    }
+    return RetBmp;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -156,7 +283,7 @@ double GetClicksPerMinute()
 void AppendGameStatusRibbon(HWND hParentWnd){
     int currX = 0;
     int length = 0;
-    HWND hRibon = CreateWindowW(L"static", L"", WS_VISIBLE | WS_CHILD, 0, 0, 1000, RIBON_HEIGHT, hParentWnd, NULL, NULL, NULL);
+    HWND hRibon = CreateWindowW(L"static", L"", WS_VISIBLE | WS_CHILD, 0, screenHeight, screenWidth, RIBON_HEIGHT, hParentWnd, NULL, NULL, NULL);
 
     length = 200;
     hScore = AppendRibbonStatsElement(hRibon, "Score: ", 0, currX, length);
@@ -179,9 +306,154 @@ void ReloadGameRibbon()
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////GameMap///////////////////////////////////
 /////////////////////////////////////////////////////////////////////
+
+void LoadImages()
+{
+    hClickPadImage = (HBITMAP)LoadImageW(NULL, L".\\clickPad.bmp", IMAGE_BITMAP, clickPadWidth, clickPadHeight, LR_LOADFROMFILE);
+}
+
+COLORREF GetDarkenedRed(int shade)
+{
+    COLORREF res = 0x0000ff;
+    if (shade > 255)
+    {
+        shade = 255;
+    }
+    res -= shade;
+    return res;
+}
+
+COLORREF GetWhitenedRed(int shade)
+{
+    COLORREF res = 0x0000ff;
+    if (shade > 255)
+    {
+        shade = 255;
+    }
+    res += 65792 * shade;
+    return res;
+}
+
+void CreateClickPadImages(int count)
+{
+    int darkenByShade = (255 - 10) / count;
+    for(int i=0; i<count; i++)
+    {
+        COLORREF newClickPadImageColor = GetDarkenedRed(darkenByShade * i);
+        HBITMAP newClickPadImage = ReplaceColor(hClickPadImage, 0x0000ff, newClickPadImageColor, NULL);
+        clickPadImages.push_back(newClickPadImage);
+    }
+}
+
+void SetClickPadsPossiblePositions()
+{
+    for(int i=0; i<mapXClickPadsCount; i++)
+    {
+        for(int j=0; j<mapYClickPadsCount; j++)
+        {
+            std::tuple <int, int> pos = std::make_tuple(clickPadWidth*i, clickPadHeight*j);
+            allClickPadsPos.push_back(pos);
+        }
+    }
+}
+
+bool IsClickPadExistCurrently(int id)
+{
+    for(int i=0; i<clickPadsVisible; i++)
+    {
+        if(currClickPads[i].id == id)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+int GetRandomCurrentlyNotVisibleClickPadId()
+{
+    int res;
+    int x = 0;
+
+    int maxClickPadsCount = mapXClickPadsCount * mapYClickPadsCount;
+    while(true)
+    {
+        res = rand() % maxClickPadsCount + 0;   // range 0-(maxClickPadsCount-1)
+
+        if (!IsClickPadExistCurrently(res))
+        {
+            break;
+        }
+
+        x++;
+    }
+    return res;
+}
+
+void PushBackNewClickPad(HWND hParentWnd)
+{
+    int id = GetRandomCurrentlyNotVisibleClickPadId();
+    std::tuple<int, int> pos = allClickPadsPos[id];
+
+    int x = std::get<0>(pos);
+    int y = std::get<1>(pos);
+    HWND handler = CreateWindowW(L"Static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP, x, y, clickPadWidth, clickPadHeight, hParentWnd, NULL, NULL, NULL);
+
+    struct ClickPad newClickPad = {x, y, id, handler};
+    currClickPads.push_back(newClickPad);
+}
+
+void SwapFirstClickPadForButton(HWND hParentWnd)
+{
+    struct ClickPad fstClickPad = currClickPads.front();
+    currClickPads.pop_front();
+
+    DestroyWindow(fstClickPad.handler);
+
+    HWND handler = CreateWindowW(L"button", NULL, WS_VISIBLE | WS_CHILD | BS_BITMAP, fstClickPad.x, fstClickPad.y, clickPadWidth, clickPadHeight, hParentWnd, (HMENU)CLICK_PAD_CLICKED, NULL, NULL);
+    SendMessageW(handler, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)clickPadImages[0]);
+
+    struct ClickPad newClickPad = {fstClickPad.x, fstClickPad.y, fstClickPad.id, handler};
+    currClickPads.push_front(newClickPad);
+}
+
+void ReloadClickPadImagesAndHandlers(HWND hParentWnd)
+{
+    SwapFirstClickPadForButton(hParentWnd);
+
+    for(int i=1; i<clickPadsVisible; i++)
+    {
+        struct ClickPad clickPad = currClickPads.at(i);
+        SendMessageW(clickPad.handler, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)clickPadImages[i]);
+    }
+}
+
+void InitializeClickPads(HWND hParentWnd)
+{
+    for(int i=0; i<clickPadsVisible; i++)
+    {
+        PushBackNewClickPad(hParentWnd);
+    }
+    ReloadClickPadImagesAndHandlers(hParentWnd);
+}
+
 void AddGameMap(HWND hParentWnd){
     AppendGameStatusRibbon(hParentWnd);
-    CreateWindowW(L"button", L"Test button", WS_VISIBLE | WS_CHILD, 500, 500, 100, 50, hParentWnd, (HMENU)CLICK_PAD_CLICKED, NULL, NULL);
+
+    CreateClickPadImages(clickPadsVisible);
+    SetClickPadsPossiblePositions();
+
+    InitializeClickPads(hParentWnd);
+}
+
+void RemoveClickedClickPadAndPushNew(HWND hParentWnd)
+{
+    struct ClickPad clickPad = currClickPads.front();
+    DestroyWindow(clickPad.handler);
+
+    currClickPads.pop_front();
+    PushBackNewClickPad(hParentWnd);
+    ReloadClickPadImagesAndHandlers(hParentWnd);
 }
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////GameMap///////////////////////////////////
@@ -224,20 +496,22 @@ void AddMenus(HWND hWnd)
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////MENU//////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
+void HandleClickPadClick(HWND hParentWnd)
+{
+    playerScore += 1;
+    ReloadGameRibbon();
 
+    RemoveClickedClickPadAndPushNew(hParentWnd);
+}
 
-
-
-
-void HandleWmCommand(WPARAM wParam){
+void HandleWmCommand(WPARAM wParam, HWND hParentWnd){
     switch(wParam)
     {
         case PARAM_MENU_EXIT:
             PostQuitMessage (0);
             break;
         case CLICK_PAD_CLICKED:
-            playerScore += 1;
-            ReloadGameRibbon();
+            HandleClickPadClick(hParentWnd);
             break;
         case TEST:
             break;
@@ -249,15 +523,17 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
     switch (message)                  /* handle the messages */
     {
         case WM_COMMAND:
-            HandleWmCommand(wParam);
+            HandleWmCommand(wParam, hwnd);
             break;
         case WM_CREATE:
             startTime = GetTickCount();
+            LoadImages();
             AddMenus(hwnd);
             AddGameMap(hwnd);
             break;
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
+            MyFile.close();
             break;
         default:                      /* for messages that we don't deal with */
             return DefWindowProc (hwnd, message, wParam, lParam);
