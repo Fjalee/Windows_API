@@ -18,6 +18,7 @@
 
 #define PARAM_MENU_EXIT 1
 #define CLICK_PAD_CLICKED 2
+#define PARAM_MENU_CUSTOM_GAME 3
 #define TEST 3000
 
 #define RIBON_HEIGHT 30
@@ -25,6 +26,9 @@
 
 #define COLORREF2RGB(Color) (Color & 0xff00) | ((Color >> 16) & 0xff) \
                                  | ((Color << 16) & 0xff0000)
+
+void RegisterDialogForCustomGame(HINSTANCE hInst);
+void DisplayDialogForCustomGame(HWND hParentWnd);
 
 std::ofstream MyFile("test.txt");
 
@@ -39,6 +43,8 @@ LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 
 /*  Make the class name into a global variable  */
 TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
+int dialogWidthCustomGame = 300;
+int dialogHeightCustomGame = 100;
 
 HMENU hMenu;
 HBITMAP hClickPadImage;
@@ -87,6 +93,8 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     /* Register the window class, and if it fails quit the program */
     if (!RegisterClassEx (&wincl))
         return 0;
+
+    RegisterDialogForCustomGame(hThisInstance);
 
     /* The class is registered, let's create the program*/
     hwnd = CreateWindowEx (
@@ -462,6 +470,65 @@ void RemoveClickedClickPadAndPushNew(HWND hParentWnd)
 //-----------------------------------------------------------------//
 //-----------------------------------------------------------------//
 /////////////////////////////////////////////////////////////////////
+/////////////////////CUSTOM_GAME_DIALOG//////////////////////////////
+/////////////////////////////////////////////////////////////////////
+LRESULT CALLBACK DialogProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
+{
+    switch(msg)
+    {
+        case WM_CLOSE:
+            DestroyWindow(hWnd);
+            break;
+        default:
+            return DefWindowProc(hWnd, msg, wp, lp);
+    }
+}
+
+void RegisterDialogForCustomGame(HINSTANCE hInst)
+{
+    WNDCLASSW wincl = {0};
+
+    wincl.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+    wincl.hCursor = LoadCursor (NULL, IDC_ARROW);
+    wincl.hInstance = hInst;
+    wincl.lpszClassName = L"CustomGameDialogClass";
+    wincl.lpfnWndProc = DialogProcedure;
+
+    /* Register the window class, and if it fails quit the program */
+    if (!RegisterClassW (&wincl))
+        return;
+}
+
+void DisplayDialogForCustomGame(HWND hParentWnd)
+{
+    HWND hwnd = CreateWindowW (
+           L"CustomGameDialogClass",
+           L"Custom game",
+           WS_VISIBLE | WS_OVERLAPPEDWINDOW,
+           200,
+           200,
+           dialogWidthCustomGame,
+           dialogHeightCustomGame,
+           hParentWnd,
+           NULL,
+           NULL,
+           NULL
+           );
+
+}
+
+void Temp(HWND hParentWnd)
+{
+    DisplayDialogForCustomGame(hParentWnd);
+}
+
+/////////////////////////////////////////////////////////////////////
+/////////////////////CUSTOM_GAME_DIALOG//////////////////////////////
+/////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
+/////////////////////////////////////////////////////////////////////
 ///////////////////////////MENU//////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 void AppendGameNewSubMenu(HMENU hParentMenu)
@@ -470,7 +537,7 @@ void AppendGameNewSubMenu(HMENU hParentMenu)
     AppendMenu(hParentMenu, MF_POPUP, (UINT_PTR)hGameNewMenu, "New");
 
     AppendMenu(hGameNewMenu, MF_SEPARATOR, NULL, NULL);
-    AppendMenu(hGameNewMenu, MF_STRING, NULL, "Custom");
+    AppendMenu(hGameNewMenu, MF_STRING, PARAM_MENU_CUSTOM_GAME, "Custom");
 }
 
 void AppendGameSubMenu(HMENU hParentMenu)
@@ -509,6 +576,9 @@ void HandleWmCommand(WPARAM wParam, HWND hParentWnd){
     {
         case PARAM_MENU_EXIT:
             PostQuitMessage (0);
+            break;
+        case PARAM_MENU_CUSTOM_GAME:
+            Temp(hParentWnd);
             break;
         case CLICK_PAD_CLICKED:
             HandleClickPadClick(hParentWnd);
