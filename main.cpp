@@ -19,6 +19,7 @@
 #define PARAM_MENU_EXIT 1
 #define CLICK_PAD_CLICKED 2
 #define PARAM_MENU_CUSTOM_GAME 3
+#define HANDLE_CUSTOM_GAME_CHOICE 4
 #define TEST 3000
 
 #define RIBON_HEIGHT 30
@@ -38,13 +39,20 @@ struct ClickPad
     HWND handler;
 };
 
+struct HandlersDialogCustomGame
+{
+    HWND height, width, visiblePads;
+};
+
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 
 /*  Make the class name into a global variable  */
 TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
+
 int dialogWidthCustomGame = 300;
-int dialogHeightCustomGame = 100;
+int dialogHeightCustomGame = 135;
+struct HandlersDialogCustomGame handlersDialogCustomGame;
 
 HMENU hMenu;
 HBITMAP hClickPadImage;
@@ -479,6 +487,15 @@ LRESULT CALLBACK DialogProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
         case WM_CLOSE:
             DestroyWindow(hWnd);
             break;
+        case WM_COMMAND:
+            switch(wp)
+            {
+                case HANDLE_CUSTOM_GAME_CHOICE:
+                    DestroyWindow(hWnd);
+
+                    break;
+            }
+            break;
         default:
             return DefWindowProc(hWnd, msg, wp, lp);
     }
@@ -488,7 +505,7 @@ void RegisterDialogForCustomGame(HINSTANCE hInst)
 {
     WNDCLASSW wincl = {0};
 
-    wincl.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+    wincl.hbrBackground = (HBRUSH) COLOR_BACKGROUND;
     wincl.hCursor = LoadCursor (NULL, IDC_ARROW);
     wincl.hInstance = hInst;
     wincl.lpszClassName = L"CustomGameDialogClass";
@@ -501,7 +518,7 @@ void RegisterDialogForCustomGame(HINSTANCE hInst)
 
 void DisplayDialogForCustomGame(HWND hParentWnd)
 {
-    HWND hwnd = CreateWindowW (
+    HWND hDialogWnd = CreateWindowW (
            L"CustomGameDialogClass",
            L"Custom game",
            WS_VISIBLE | WS_OVERLAPPEDWINDOW,
@@ -515,13 +532,24 @@ void DisplayDialogForCustomGame(HWND hParentWnd)
            NULL
            );
 
-}
+    int labelWidth = 90;
+    int labelHeight = 20;
+    int buttonWidth = 50;
+    int currY = 5;
 
-void Temp(HWND hParentWnd)
-{
-    DisplayDialogForCustomGame(hParentWnd);
-}
+    CreateWindowW(L"static",L"Map width", WS_VISIBLE | WS_CHILD | WS_TILED, 5, currY, labelWidth, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    HWND hMapWidth = CreateWindowW(L"edit", NULL, WS_VISIBLE | WS_CHILD | WS_TILED, 5+labelWidth, currY, dialogWidthCustomGame - labelWidth - 27, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    currY += labelHeight;
+    CreateWindowW(L"static",L"Map height", WS_VISIBLE | WS_CHILD | WS_TILED, 5, currY, labelWidth, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    HWND hMapHeight = CreateWindowW(L"edit", NULL, WS_VISIBLE | WS_CHILD | WS_TILED, 5+labelWidth, currY, dialogWidthCustomGame - labelWidth - 27, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    currY += labelHeight;
+    CreateWindowW(L"static",L"Visible pads", WS_VISIBLE | WS_CHILD | WS_TILED, 5, currY, labelWidth, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    HWND hVisiblePads = CreateWindowW(L"edit", NULL, WS_VISIBLE | WS_CHILD | WS_TILED, 5+labelWidth, currY, dialogWidthCustomGame - labelWidth - 27, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    currY += labelHeight;
+    CreateWindowW(L"button", L"OK", WS_VISIBLE | WS_CHILD, (dialogWidthCustomGame-buttonWidth-8)/2, currY+5, buttonWidth, labelHeight, hDialogWnd, (HMENU)HANDLE_CUSTOM_GAME_CHOICE, NULL, NULL);
 
+    handlersDialogCustomGame = {hMapHeight, hMapWidth, hVisiblePads};
+}
 /////////////////////////////////////////////////////////////////////
 /////////////////////CUSTOM_GAME_DIALOG//////////////////////////////
 /////////////////////////////////////////////////////////////////////
@@ -578,7 +606,7 @@ void HandleWmCommand(WPARAM wParam, HWND hParentWnd){
             PostQuitMessage (0);
             break;
         case PARAM_MENU_CUSTOM_GAME:
-            Temp(hParentWnd);
+            DisplayDialogForCustomGame(hParentWnd);
             break;
         case CLICK_PAD_CLICKED:
             HandleClickPadClick(hParentWnd);
