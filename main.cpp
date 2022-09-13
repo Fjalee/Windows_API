@@ -29,6 +29,7 @@
 struct ClickPad
 {
     int x, y, id;
+    HWND handler;
 };
 
 /*  Declare Windows procedure  */
@@ -387,24 +388,39 @@ int GetRandomCurrentlyNotVisibleClickPadId()
     return res;
 }
 
-void PushNewClickPad()
+void PushNewClickPad(HWND hParentWnd)
 {
     int id = GetRandomCurrentlyNotVisibleClickPadId();
     std::tuple<int, int> pos = allClickPadsPos[id];
 
     int x = std::get<0>(pos);
     int y = std::get<1>(pos);
+    HWND handler = CreateWindowW(L"Static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP, x, y, clickPadWidth, clickPadHeight, hParentWnd, NULL, NULL, NULL);
 
-    struct ClickPad newClickPad = {x, y, id};
+    struct ClickPad newClickPad = {x, y, id, handler};
     currClickPads.push_back(newClickPad);
 }
 
-void InitializeRandomPositionsForClickPads()
+void ReloadClickPadImagesAndHandlers(HWND hParentWnd)
+{
+    struct ClickPad fstClickPad = currClickPads.at(0);
+    fstClickPad.handler = CreateWindowW(L"button", NULL, WS_VISIBLE | WS_CHILD | BS_BITMAP, fstClickPad.x, fstClickPad.y, clickPadWidth, clickPadHeight, hParentWnd, (HMENU)CLICK_PAD_CLICKED, NULL, NULL);
+    SendMessageW(fstClickPad.handler, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)clickPadImages[0]);
+
+    for(int i=i; i<clickPadsVisible; i++)
+    {
+        struct ClickPad clickPad = currClickPads[i];
+        SendMessageW(clickPad.handler, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)clickPadImages[i]);
+    }
+}
+
+void InitializeClickPads(HWND hParentWnd)
 {
     for(int i=0; i<clickPadsVisible; i++)
     {
-        PushNewClickPad();
+        PushNewClickPad(hParentWnd);
     }
+    ReloadClickPadImagesAndHandlers(hParentWnd);
 }
 
 void AppendInitClickPads(HWND hParentWnd)
@@ -434,11 +450,8 @@ void AddGameMap(HWND hParentWnd){
 
     SetClickPadsPossiblePositions();
 
-    InitializeRandomPositionsForClickPads();
+    InitializeClickPads(hParentWnd);
     AppendInitClickPads(hParentWnd);
-
-    //hClickPad = CreateWindowW(L"Static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP, 50, 50, 100, 100, hParentWnd, NULL, NULL, NULL);
-    //SendMessageW(hClickPad, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hClickPadImage);
 }
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////GameMap///////////////////////////////////
@@ -482,9 +495,13 @@ void AddMenus(HWND hWnd)
 ///////////////////////////MENU//////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
+void HandleClickPadClick()
+{
+    playerScore += 1;
+    ReloadGameRibbon();
 
 
-
+}
 
 void HandleWmCommand(WPARAM wParam){
     switch(wParam)
@@ -493,8 +510,7 @@ void HandleWmCommand(WPARAM wParam){
             PostQuitMessage (0);
             break;
         case CLICK_PAD_CLICKED:
-            playerScore += 1;
-            ReloadGameRibbon();
+            HandleClickPadClick();
             break;
         case TEST:
             break;
