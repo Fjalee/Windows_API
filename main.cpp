@@ -18,6 +18,8 @@
 
 #define PARAM_MENU_EXIT 1
 #define CLICK_PAD_CLICKED 2
+#define PARAM_MENU_CUSTOM_GAME 3
+#define HANDLE_CUSTOM_GAME_CHOICE 4
 #define TEST 3000
 
 #define RIBON_HEIGHT 30
@@ -26,35 +28,54 @@
 #define COLORREF2RGB(Color) (Color & 0xff00) | ((Color >> 16) & 0xff) \
                                  | ((Color << 16) & 0xff0000)
 
-std::ofstream MyFile("test.txt");
+/*  Declare Windows procedure  */
+LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
+void RegisterDialogForCustomGame(HINSTANCE hInst);
+void DisplayDialogForCustomGame(HWND hParentWnd);
+void RestartGame(HWND hWnd);
 
 struct ClickPad
 {
     int x, y, id;
     HWND handler;
 };
+struct HandlersDialogCustomGame
+{
+    HWND height, width, visiblePads;
+};
 
-/*  Declare Windows procedure  */
-LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
+std::ofstream MyFile("test.txt");
 
 /*  Make the class name into a global variable  */
 TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
 
+int dialogWidthCustomGame = 300;
+int dialogHeightCustomGame = 135;
+struct HandlersDialogCustomGame handlersDialogCustomGame;
+
+HWND hMainParentWindow;
 HMENU hMenu;
 HBITMAP hClickPadImage;
-HWND hScore, hSpeed, hClickPad;
+HWND hScore, hSpeed;
 
 int playerScore = 0;
 int playerSpeed = 0;
 DWORD startTime;
 
+int defaultMapXClickPadsCount = 4;
+int defaultMapYClickPadsCount = 4;
+int defaultClickPadsVisible = 5;
+int maxMapXClickPadsCount = 128;
+int maxMapYClickPadsCount = 128;
+int maxClickPadsVisible = 32;
+int mapXClickPadsCount = defaultMapXClickPadsCount;
+int mapYClickPadsCount = defaultMapYClickPadsCount;
+int clickPadsVisible = defaultClickPadsVisible;
+
 int screenWidth = 1000;
 int screenHeight = 700;
-int mapXClickPadsCount = 4;
-int mapYClickPadsCount = 4;
-int clickPadsVisible = 3;
-int clickPadWidth = screenWidth / mapXClickPadsCount;
-int clickPadHeight = screenHeight / mapYClickPadsCount;
+int clickPadWidth;
+int clickPadHeight;
 
 std::vector<std::tuple <int, int>> allClickPadsPos;
 std::vector<HBITMAP> clickPadImages;
@@ -87,6 +108,8 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     /* Register the window class, and if it fails quit the program */
     if (!RegisterClassEx (&wincl))
         return 0;
+
+    RegisterDialogForCustomGame(hThisInstance);
 
     /* The class is registered, let's create the program*/
     hwnd = CreateWindowEx (
@@ -253,6 +276,13 @@ std::string DWORDToString(DWORD value)
     return ss.str();
 }
 
+std::string wchar_tToString(wchar_t* value)
+{
+    std::wstring ws(value);
+    std::string str(ws.begin(), ws.end());
+    return str;
+}
+
 std::string doubleToString(double value)
 {
     std::stringstream ss;
@@ -270,6 +300,10 @@ double GetPassedTimeInSeconds()
 double GetClicksPerMinute()
 {
     double secsPassed = GetPassedTimeInSeconds();
+    if(playerScore == 0)
+    {
+        return 0.0;
+    }
     if(secsPassed < 1)
     {
         return 99999.0;
@@ -438,8 +472,6 @@ void InitializeClickPads(HWND hParentWnd)
 }
 
 void AddGameMap(HWND hParentWnd){
-    AppendGameStatusRibbon(hParentWnd);
-
     CreateClickPadImages(clickPadsVisible);
     SetClickPadsPossiblePositions();
 
@@ -462,6 +494,132 @@ void RemoveClickedClickPadAndPushNew(HWND hParentWnd)
 //-----------------------------------------------------------------//
 //-----------------------------------------------------------------//
 /////////////////////////////////////////////////////////////////////
+/////////////////////CUSTOM_GAME_DIALOG//////////////////////////////
+/////////////////////////////////////////////////////////////////////
+int GetIntFromNumberOnlyEditWindow(int len, HWND handler, int defaultIfStrEmpty)
+{
+    if(len > 100){
+        len = 100;
+    }
+    wchar_t input[100];
+    GetWindowTextW(handler, input, len);
+    std::string str = wchar_tToString(input);
+
+    if (str.empty()){
+        return defaultIfStrEmpty;
+    }
+
+    return std::stoi(str);
+}
+
+void SetValuesFromDialogCustomGame()
+{
+    int resHeight = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.height, defaultMapXClickPadsCount);
+    int resWidth = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.width, defaultMapYClickPadsCount);
+    int resVisiblePads = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.visiblePads, defaultClickPadsVisible);
+
+    if(resHeight * resWidth < resVisiblePads)
+    {
+        resHeight = defaultMapXClickPadsCount;
+        resWidth = defaultMapYClickPadsCount;
+        resVisiblePads = defaultClickPadsVisible;
+    }
+    if(resHeight==0) resHeight = defaultMapXClickPadsCount;
+    if(resWidth==0) resWidth = defaultMapYClickPadsCount;
+    if(resVisiblePads==0) resVisiblePads = defaultClickPadsVisible;
+
+    if(resHeight>maxMapXClickPadsCount) resHeight = maxMapXClickPadsCount;
+    if(resWidth>maxMapYClickPadsCount) resWidth = maxMapYClickPadsCount;
+    if(resVisiblePads>maxClickPadsVisible) resVisiblePads = maxClickPadsVisible;
+
+    mapXClickPadsCount = resHeight;
+    mapYClickPadsCount = resWidth;
+    clickPadsVisible = resVisiblePads;
+}
+
+void HandleCustomGameChoice()
+{
+    SetValuesFromDialogCustomGame();
+}
+
+LRESULT CALLBACK DialogProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
+{
+    switch(msg)
+    {
+        case WM_CLOSE:
+            DestroyWindow(hWnd);
+            break;
+        case WM_COMMAND:
+            switch(wp)
+            {
+                case HANDLE_CUSTOM_GAME_CHOICE:
+                    HandleCustomGameChoice();
+                    RestartGame(hMainParentWindow);
+                    DestroyWindow(hWnd);
+                    break;
+            }
+            break;
+        default:
+            return DefWindowProc(hWnd, msg, wp, lp);
+    }
+}
+
+void RegisterDialogForCustomGame(HINSTANCE hInst)
+{
+    WNDCLASSW wincl = {0};
+
+    wincl.hbrBackground = (HBRUSH) COLOR_BACKGROUND;
+    wincl.hCursor = LoadCursor (NULL, IDC_ARROW);
+    wincl.hInstance = hInst;
+    wincl.lpszClassName = L"CustomGameDialogClass";
+    wincl.lpfnWndProc = DialogProcedure;
+
+    /* Register the window class, and if it fails quit the program */
+    if (!RegisterClassW (&wincl))
+        return;
+}
+
+void DisplayDialogForCustomGame(HWND hParentWnd)
+{
+    HWND hDialogWnd = CreateWindowW (
+           L"CustomGameDialogClass",
+           L"Custom game",
+           WS_VISIBLE | WS_OVERLAPPEDWINDOW,
+           200,
+           200,
+           dialogWidthCustomGame,
+           dialogHeightCustomGame,
+           hParentWnd,
+           NULL,
+           NULL,
+           NULL
+           );
+
+    int labelWidth = 90;
+    int labelHeight = 20;
+    int buttonWidth = 50;
+    int currY = 5;
+
+    CreateWindowW(L"static",L"Map width", WS_VISIBLE | WS_CHILD | WS_TILED, 5, currY, labelWidth, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    HWND hMapWidth = CreateWindowW(L"edit", NULL, WS_VISIBLE | WS_CHILD | WS_TILED | ES_NUMBER, 5+labelWidth, currY, dialogWidthCustomGame - labelWidth - 27, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    currY += labelHeight;
+    CreateWindowW(L"static",L"Map height", WS_VISIBLE | WS_CHILD | WS_TILED, 5, currY, labelWidth, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    HWND hMapHeight = CreateWindowW(L"edit", NULL, WS_VISIBLE | WS_CHILD | WS_TILED | ES_NUMBER, 5+labelWidth, currY, dialogWidthCustomGame - labelWidth - 27, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    currY += labelHeight;
+    CreateWindowW(L"static",L"Visible pads", WS_VISIBLE | WS_CHILD | WS_TILED, 5, currY, labelWidth, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    HWND hVisiblePads = CreateWindowW(L"edit", NULL, WS_VISIBLE | WS_CHILD | WS_TILED | ES_NUMBER, 5+labelWidth, currY, dialogWidthCustomGame - labelWidth - 27, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    currY += labelHeight;
+    CreateWindowW(L"button", L"OK", WS_VISIBLE | WS_CHILD, (dialogWidthCustomGame-buttonWidth-8)/2, currY+5, buttonWidth, labelHeight, hDialogWnd, (HMENU)HANDLE_CUSTOM_GAME_CHOICE, NULL, NULL);
+
+    handlersDialogCustomGame = {hMapHeight, hMapWidth, hVisiblePads};
+}
+/////////////////////////////////////////////////////////////////////
+/////////////////////CUSTOM_GAME_DIALOG//////////////////////////////
+/////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
+/////////////////////////////////////////////////////////////////////
 ///////////////////////////MENU//////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 void AppendGameNewSubMenu(HMENU hParentMenu)
@@ -470,7 +628,7 @@ void AppendGameNewSubMenu(HMENU hParentMenu)
     AppendMenu(hParentMenu, MF_POPUP, (UINT_PTR)hGameNewMenu, "New");
 
     AppendMenu(hGameNewMenu, MF_SEPARATOR, NULL, NULL);
-    AppendMenu(hGameNewMenu, MF_STRING, NULL, "Custom");
+    AppendMenu(hGameNewMenu, MF_STRING, PARAM_MENU_CUSTOM_GAME, "Custom");
 }
 
 void AppendGameSubMenu(HMENU hParentMenu)
@@ -510,12 +668,50 @@ void HandleWmCommand(WPARAM wParam, HWND hParentWnd){
         case PARAM_MENU_EXIT:
             PostQuitMessage (0);
             break;
+        case PARAM_MENU_CUSTOM_GAME:
+            DisplayDialogForCustomGame(hParentWnd);
+            break;
         case CLICK_PAD_CLICKED:
             HandleClickPadClick(hParentWnd);
             break;
         case TEST:
             break;
     }
+}
+
+void ClearCurrClickPads()
+{
+    int lSize = currClickPads.size();
+
+    for(int i=0; i<lSize; i++)
+    {
+        HWND hCurr = currClickPads.front().handler;
+        DestroyWindow(hCurr);
+        currClickPads.pop_front();
+    }
+}
+
+void SetClickPadSize()
+{
+    clickPadWidth = screenWidth / mapXClickPadsCount;
+    clickPadHeight = screenHeight / mapYClickPadsCount;
+}
+
+void RestartGame(HWND hwnd)
+{
+    startTime = GetTickCount();
+    playerScore = 0;
+    playerSpeed = 0;
+    ReloadGameRibbon();
+
+    SetClickPadSize();
+
+    ClearCurrClickPads();
+    clickPadImages.clear();
+    allClickPadsPos.clear();
+
+    LoadImages();
+    AddGameMap(hwnd);
 }
 
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -526,10 +722,12 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             HandleWmCommand(wParam, hwnd);
             break;
         case WM_CREATE:
-            startTime = GetTickCount();
-            LoadImages();
+            hMainParentWindow = hwnd;
+
             AddMenus(hwnd);
-            AddGameMap(hwnd);
+            AppendGameStatusRibbon(hwnd);
+
+            RestartGame(hMainParentWindow);
             break;
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
