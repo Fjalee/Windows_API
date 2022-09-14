@@ -28,24 +28,23 @@
 #define COLORREF2RGB(Color) (Color & 0xff00) | ((Color >> 16) & 0xff) \
                                  | ((Color << 16) & 0xff0000)
 
+/*  Declare Windows procedure  */
+LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 void RegisterDialogForCustomGame(HINSTANCE hInst);
 void DisplayDialogForCustomGame(HWND hParentWnd);
-
-std::ofstream MyFile("test.txt");
+void RestartGame(HWND hWnd);
 
 struct ClickPad
 {
     int x, y, id;
     HWND handler;
 };
-
 struct HandlersDialogCustomGame
 {
     HWND height, width, visiblePads;
 };
 
-/*  Declare Windows procedure  */
-LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
+std::ofstream MyFile("test.txt");
 
 /*  Make the class name into a global variable  */
 TCHAR szClassName[ ] = _T("CodeBlocksWindowsApp");
@@ -54,9 +53,10 @@ int dialogWidthCustomGame = 300;
 int dialogHeightCustomGame = 135;
 struct HandlersDialogCustomGame handlersDialogCustomGame;
 
+HWND hMainParentWindow;
 HMENU hMenu;
 HBITMAP hClickPadImage;
-HWND hScore, hSpeed, hClickPad;
+HWND hScore, hSpeed;
 
 int playerScore = 0;
 int playerSpeed = 0;
@@ -74,8 +74,8 @@ int clickPadsVisible = defaultClickPadsVisible;
 
 int screenWidth = 1000;
 int screenHeight = 700;
-int clickPadWidth = screenWidth / mapXClickPadsCount;
-int clickPadHeight = screenHeight / mapYClickPadsCount;
+int clickPadWidth;
+int clickPadHeight;
 
 std::vector<std::tuple <int, int>> allClickPadsPos;
 std::vector<HBITMAP> clickPadImages;
@@ -300,6 +300,10 @@ double GetPassedTimeInSeconds()
 double GetClicksPerMinute()
 {
     double secsPassed = GetPassedTimeInSeconds();
+    if(playerScore == 0)
+    {
+        return 0.0;
+    }
     if(secsPassed < 1)
     {
         return 99999.0;
@@ -468,8 +472,6 @@ void InitializeClickPads(HWND hParentWnd)
 }
 
 void AddGameMap(HWND hParentWnd){
-    AppendGameStatusRibbon(hParentWnd);
-
     CreateClickPadImages(clickPadsVisible);
     SetClickPadsPossiblePositions();
 
@@ -510,7 +512,7 @@ int GetIntFromNumberOnlyEditWindow(int len, HWND handler, int defaultIfStrEmpty)
     return std::stoi(str);
 }
 
-void GetInputsFromDialogCustomGame(int &newHeight, int &newWidht, int &newVisiblePads)
+void SetValuesFromDialogCustomGame()
 {
     int resHeight = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.height, defaultMapXClickPadsCount);
     int resWidth = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.width, defaultMapYClickPadsCount);
@@ -530,16 +532,14 @@ void GetInputsFromDialogCustomGame(int &newHeight, int &newWidht, int &newVisibl
     if(resWidth>maxMapYClickPadsCount) resWidth = maxMapYClickPadsCount;
     if(resVisiblePads>maxClickPadsVisible) resVisiblePads = maxClickPadsVisible;
 
-    newHeight = resHeight;
-    newWidht = resWidth;
-    newVisiblePads = resVisiblePads;
+    mapXClickPadsCount = resHeight;
+    mapYClickPadsCount = resWidth;
+    clickPadsVisible = resVisiblePads;
 }
 
 void HandleCustomGameChoice()
 {
-    int newHeight, newWidht, newVisiblePads;
-
-    GetInputsFromDialogCustomGame(newHeight, newWidht, newVisiblePads);
+    SetValuesFromDialogCustomGame();
 }
 
 LRESULT CALLBACK DialogProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
@@ -554,6 +554,7 @@ LRESULT CALLBACK DialogProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
             {
                 case HANDLE_CUSTOM_GAME_CHOICE:
                     HandleCustomGameChoice();
+                    RestartGame(hMainParentWindow);
                     DestroyWindow(hWnd);
                     break;
             }
@@ -678,6 +679,41 @@ void HandleWmCommand(WPARAM wParam, HWND hParentWnd){
     }
 }
 
+void ClearCurrClickPads()
+{
+    int lSize = currClickPads.size();
+
+    for(int i=0; i<lSize; i++)
+    {
+        HWND hCurr = currClickPads.front().handler;
+        DestroyWindow(hCurr);
+        currClickPads.pop_front();
+    }
+}
+
+void SetClickPadSize()
+{
+    clickPadWidth = screenWidth / mapXClickPadsCount;
+    clickPadHeight = screenHeight / mapYClickPadsCount;
+}
+
+void RestartGame(HWND hwnd)
+{
+    startTime = GetTickCount();
+    playerScore = 0;
+    playerSpeed = 0;
+    ReloadGameRibbon();
+
+    SetClickPadSize();
+
+    ClearCurrClickPads();
+    clickPadImages.clear();
+    allClickPadsPos.clear();
+
+    LoadImages();
+    AddGameMap(hwnd);
+}
+
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)                  /* handle the messages */
@@ -686,10 +722,12 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             HandleWmCommand(wParam, hwnd);
             break;
         case WM_CREATE:
-            startTime = GetTickCount();
-            LoadImages();
+            hMainParentWindow = hwnd;
+
             AddMenus(hwnd);
-            AddGameMap(hwnd);
+            AppendGameStatusRibbon(hwnd);
+
+            RestartGame(hMainParentWindow);
             break;
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
