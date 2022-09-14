@@ -510,25 +510,36 @@ int GetIntFromNumberOnlyEditWindow(int len, HWND handler, int defaultIfStrEmpty)
     return std::stoi(str);
 }
 
+void GetInputsFromDialogCustomGame(int &newHeight, int &newWidht, int &newVisiblePads)
+{
+    int resHeight = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.height, defaultMapXClickPadsCount);
+    int resWidth = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.width, defaultMapYClickPadsCount);
+    int resVisiblePads = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.visiblePads, defaultClickPadsVisible);
+
+    if(resHeight * resWidth < resVisiblePads)
+    {
+        resHeight = defaultMapXClickPadsCount;
+        resWidth = defaultMapYClickPadsCount;
+        resVisiblePads = defaultClickPadsVisible;
+    }
+    if(resHeight==0) resHeight = defaultMapXClickPadsCount;
+    if(resWidth==0) resWidth = defaultMapYClickPadsCount;
+    if(resVisiblePads==0) resVisiblePads = defaultClickPadsVisible;
+
+    if(resHeight>maxMapXClickPadsCount) resHeight = maxMapXClickPadsCount;
+    if(resWidth>maxMapYClickPadsCount) resWidth = maxMapYClickPadsCount;
+    if(resVisiblePads>maxClickPadsVisible) resVisiblePads = maxClickPadsVisible;
+
+    newHeight = resHeight;
+    newWidht = resWidth;
+    newVisiblePads = resVisiblePads;
+}
+
 void HandleCustomGameChoice()
 {
-    int newHeight = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.height, defaultMapXClickPadsCount);
-    int newWidth = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.width, defaultMapYClickPadsCount);
-    int newVisiblePads = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.visiblePads, defaultClickPadsVisible);
+    int newHeight, newWidht, newVisiblePads;
 
-    if(newHeight * newWidth < newVisiblePads)
-    {
-        newHeight = defaultMapXClickPadsCount;
-        newWidth = defaultMapYClickPadsCount;
-        newVisiblePads = defaultClickPadsVisible;
-    }
-    if(newHeight==0) newHeight = defaultMapXClickPadsCount;
-    if(newWidth==0) newWidth = defaultMapYClickPadsCount;
-    if(newVisiblePads==0) newVisiblePads = defaultClickPadsVisible;
-
-    if(newHeight>maxMapXClickPadsCount) newHeight = maxMapXClickPadsCount;
-    if(newWidth>maxMapYClickPadsCount) newWidth = maxMapYClickPadsCount;
-    if(newVisiblePads>maxClickPadsVisible) newVisiblePads = maxClickPadsVisible;
+    GetInputsFromDialogCustomGame(newHeight, newWidht, newVisiblePads);
 }
 
 LRESULT CALLBACK DialogProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
