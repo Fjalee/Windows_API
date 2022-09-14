@@ -269,6 +269,13 @@ std::string DWORDToString(DWORD value)
     return ss.str();
 }
 
+std::string wchar_tToString(wchar_t* value)
+{
+    std::wstring ws(value);
+    std::string str(ws.begin(), ws.end());
+    return str;
+}
+
 std::string doubleToString(double value)
 {
     std::stringstream ss;
@@ -480,6 +487,25 @@ void RemoveClickedClickPadAndPushNew(HWND hParentWnd)
 /////////////////////////////////////////////////////////////////////
 /////////////////////CUSTOM_GAME_DIALOG//////////////////////////////
 /////////////////////////////////////////////////////////////////////
+int GetIntFromNumberOnlyEditWindow(int len, HWND handler)
+{
+    if(len > 100){
+        len = 100;
+    }
+    wchar_t input[100];
+    GetWindowTextW(handler, input, len);
+    std::string str = wchar_tToString(input);
+
+    return std::stoi(str);
+}
+
+void HandleCustomGameChoice()
+{
+    int newHeight = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.height);
+    int newWidth = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.width);
+    int newVisiblePads = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.visiblePads);
+}
+
 LRESULT CALLBACK DialogProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     switch(msg)
@@ -491,8 +517,8 @@ LRESULT CALLBACK DialogProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
             switch(wp)
             {
                 case HANDLE_CUSTOM_GAME_CHOICE:
+                    HandleCustomGameChoice();
                     DestroyWindow(hWnd);
-
                     break;
             }
             break;
@@ -538,13 +564,13 @@ void DisplayDialogForCustomGame(HWND hParentWnd)
     int currY = 5;
 
     CreateWindowW(L"static",L"Map width", WS_VISIBLE | WS_CHILD | WS_TILED, 5, currY, labelWidth, labelHeight, hDialogWnd, NULL, NULL, NULL);
-    HWND hMapWidth = CreateWindowW(L"edit", NULL, WS_VISIBLE | WS_CHILD | WS_TILED, 5+labelWidth, currY, dialogWidthCustomGame - labelWidth - 27, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    HWND hMapWidth = CreateWindowW(L"edit", NULL, WS_VISIBLE | WS_CHILD | WS_TILED | ES_NUMBER, 5+labelWidth, currY, dialogWidthCustomGame - labelWidth - 27, labelHeight, hDialogWnd, NULL, NULL, NULL);
     currY += labelHeight;
     CreateWindowW(L"static",L"Map height", WS_VISIBLE | WS_CHILD | WS_TILED, 5, currY, labelWidth, labelHeight, hDialogWnd, NULL, NULL, NULL);
-    HWND hMapHeight = CreateWindowW(L"edit", NULL, WS_VISIBLE | WS_CHILD | WS_TILED, 5+labelWidth, currY, dialogWidthCustomGame - labelWidth - 27, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    HWND hMapHeight = CreateWindowW(L"edit", NULL, WS_VISIBLE | WS_CHILD | WS_TILED | ES_NUMBER, 5+labelWidth, currY, dialogWidthCustomGame - labelWidth - 27, labelHeight, hDialogWnd, NULL, NULL, NULL);
     currY += labelHeight;
     CreateWindowW(L"static",L"Visible pads", WS_VISIBLE | WS_CHILD | WS_TILED, 5, currY, labelWidth, labelHeight, hDialogWnd, NULL, NULL, NULL);
-    HWND hVisiblePads = CreateWindowW(L"edit", NULL, WS_VISIBLE | WS_CHILD | WS_TILED, 5+labelWidth, currY, dialogWidthCustomGame - labelWidth - 27, labelHeight, hDialogWnd, NULL, NULL, NULL);
+    HWND hVisiblePads = CreateWindowW(L"edit", NULL, WS_VISIBLE | WS_CHILD | WS_TILED | ES_NUMBER, 5+labelWidth, currY, dialogWidthCustomGame - labelWidth - 27, labelHeight, hDialogWnd, NULL, NULL, NULL);
     currY += labelHeight;
     CreateWindowW(L"button", L"OK", WS_VISIBLE | WS_CHILD, (dialogWidthCustomGame-buttonWidth-8)/2, currY+5, buttonWidth, labelHeight, hDialogWnd, (HMENU)HANDLE_CUSTOM_GAME_CHOICE, NULL, NULL);
 
