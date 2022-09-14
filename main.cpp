@@ -62,11 +62,18 @@ int playerScore = 0;
 int playerSpeed = 0;
 DWORD startTime;
 
+int defaultMapXClickPadsCount = 4;
+int defaultMapYClickPadsCount = 4;
+int defaultClickPadsVisible = 5;
+int maxMapXClickPadsCount = 128;
+int maxMapYClickPadsCount = 128;
+int maxClickPadsVisible = 32;
+int mapXClickPadsCount = defaultMapXClickPadsCount;
+int mapYClickPadsCount = defaultMapYClickPadsCount;
+int clickPadsVisible = defaultClickPadsVisible;
+
 int screenWidth = 1000;
 int screenHeight = 700;
-int mapXClickPadsCount = 4;
-int mapYClickPadsCount = 4;
-int clickPadsVisible = 3;
 int clickPadWidth = screenWidth / mapXClickPadsCount;
 int clickPadHeight = screenHeight / mapYClickPadsCount;
 
@@ -487,7 +494,7 @@ void RemoveClickedClickPadAndPushNew(HWND hParentWnd)
 /////////////////////////////////////////////////////////////////////
 /////////////////////CUSTOM_GAME_DIALOG//////////////////////////////
 /////////////////////////////////////////////////////////////////////
-int GetIntFromNumberOnlyEditWindow(int len, HWND handler)
+int GetIntFromNumberOnlyEditWindow(int len, HWND handler, int defaultIfStrEmpty)
 {
     if(len > 100){
         len = 100;
@@ -496,14 +503,32 @@ int GetIntFromNumberOnlyEditWindow(int len, HWND handler)
     GetWindowTextW(handler, input, len);
     std::string str = wchar_tToString(input);
 
+    if (str.empty()){
+        return defaultIfStrEmpty;
+    }
+
     return std::stoi(str);
 }
 
 void HandleCustomGameChoice()
 {
-    int newHeight = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.height);
-    int newWidth = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.width);
-    int newVisiblePads = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.visiblePads);
+    int newHeight = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.height, defaultMapXClickPadsCount);
+    int newWidth = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.width, defaultMapYClickPadsCount);
+    int newVisiblePads = GetIntFromNumberOnlyEditWindow(4, handlersDialogCustomGame.visiblePads, defaultClickPadsVisible);
+
+    if(newHeight * newWidth < newVisiblePads)
+    {
+        newHeight = defaultMapXClickPadsCount;
+        newWidth = defaultMapYClickPadsCount;
+        newVisiblePads = defaultClickPadsVisible;
+    }
+    if(newHeight==0) newHeight = defaultMapXClickPadsCount;
+    if(newWidth==0) newWidth = defaultMapYClickPadsCount;
+    if(newVisiblePads==0) newVisiblePads = defaultClickPadsVisible;
+
+    if(newHeight>maxMapXClickPadsCount) newHeight = maxMapXClickPadsCount;
+    if(newWidth>maxMapYClickPadsCount) newWidth = maxMapYClickPadsCount;
+    if(newVisiblePads>maxClickPadsVisible) newVisiblePads = maxClickPadsVisible;
 }
 
 LRESULT CALLBACK DialogProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
