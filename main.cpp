@@ -618,6 +618,44 @@ void DisplayDialogForCustomGame(HWND hParentWnd)
 //-----------------------------------------------------------------//
 //-----------------------------------------------------------------//
 //-----------------------------------------------------------------//
+/////////////////////////////////////////////////////////////////////
+///////////////////////////////FILE//////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+void SaveCustomGameSetting(int height, int width, int visibleClickPads)
+{
+   HANDLE hFile = CreateFile(
+      ".\\custom_game_settings.csv",     // Filename
+      FILE_APPEND_DATA ,          // Desired access
+      FILE_SHARE_READ,        // Share mode
+      NULL,                   // Security attributes
+      OPEN_ALWAYS,             //opens or creates if doesnt exidst
+      FILE_ATTRIBUTE_NORMAL,  // Flags and attributes
+      NULL);                  // Template file handle
+
+   if (hFile == INVALID_HANDLE_VALUE)
+   {
+      return;
+   }
+
+   std::string strText = std::to_string(height) + ", " + std::to_string(width) + ", " + std::to_string(visibleClickPads) + "\n";
+   DWORD bytesWritten;
+
+   WriteFile(
+      hFile,            // Handle to the file
+      strText.c_str(),  // Buffer to write
+      strText.size(),   // Buffer size
+      &bytesWritten,    // Bytes written
+      nullptr);         // Overlapped
+
+   // Close the handle once we don't need it.
+   CloseHandle(hFile);
+}
+/////////////////////////////////////////////////////////////////////
+///////////////////////////////FILE//////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
 void HandleClickPadClick(HWND hParentWnd)
 {
     playerScore += 1;
@@ -629,6 +667,9 @@ void HandleClickPadClick(HWND hParentWnd)
 void HandleWmCommand(WPARAM wParam, HWND hParentWnd){
     switch(wParam)
     {
+        case IDR_MENU_SAVE_SETTINGS:
+            SaveCustomGameSetting(mapXClickPadsCount, mapYClickPadsCount, clickPadsVisible);
+            break;
         case IDR_MENU_RESTART:
             RestartGame(hMainParentWindow);
             break;
