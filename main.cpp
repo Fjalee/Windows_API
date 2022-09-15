@@ -15,10 +15,9 @@
 #include <cstdlib>
 #include <tuple>
 #include <algorithm>
+#include "menu.h"
 
-#define PARAM_MENU_EXIT 1
 #define CLICK_PAD_CLICKED 2
-#define PARAM_MENU_CUSTOM_GAME 3
 #define HANDLE_CUSTOM_GAME_CHOICE 4
 #define TEST 3000
 
@@ -122,7 +121,7 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
            screenWidth,         /* The programs width */
            screenHeight + EXTRA_HEIGHT_FOR_SCREEN + RIBON_HEIGHT,        /* and height in pixels */
            HWND_DESKTOP,        /* The window is a child-window to desktop */
-           NULL,                /* No menu */
+           LoadMenu(hThisInstance, MAKEINTRESOURCE(IDR_MYMENU)),                /* No menu */
            hThisInstance,       /* Program Instance handler */
            NULL                 /* No Window Creation data */
            );
@@ -619,41 +618,6 @@ void DisplayDialogForCustomGame(HWND hParentWnd)
 //-----------------------------------------------------------------//
 //-----------------------------------------------------------------//
 //-----------------------------------------------------------------//
-/////////////////////////////////////////////////////////////////////
-///////////////////////////MENU//////////////////////////////////////
-/////////////////////////////////////////////////////////////////////
-void AppendGameNewSubMenu(HMENU hParentMenu)
-{
-    HMENU hGameNewMenu = CreateMenu();
-    AppendMenu(hParentMenu, MF_POPUP, (UINT_PTR)hGameNewMenu, "New");
-
-    AppendMenu(hGameNewMenu, MF_SEPARATOR, NULL, NULL);
-    AppendMenu(hGameNewMenu, MF_STRING, PARAM_MENU_CUSTOM_GAME, "Custom");
-}
-
-void AppendGameSubMenu(HMENU hParentMenu)
-{
-    HMENU hGameMenu = CreateMenu();
-    AppendMenu(hParentMenu, MF_POPUP, (UINT_PTR)hGameMenu, "Game");
-
-    AppendGameNewSubMenu(hGameMenu);
-    AppendMenu(hGameMenu, MF_SEPARATOR, NULL, NULL);
-    AppendMenu(hGameMenu, MF_STRING, NULL, "SaveSettings");
-}
-
-void AddMenus(HWND hWnd)
-{
-    hMenu = CreateMenu();
-
-    AppendGameSubMenu(hMenu);
-
-    AppendMenu(hMenu, MF_STRING, PARAM_MENU_EXIT, "Exit");
-
-    SetMenu(hWnd, hMenu);
-}
-/////////////////////////////////////////////////////////////////////
-///////////////////////////MENU//////////////////////////////////////
-/////////////////////////////////////////////////////////////////////
 void HandleClickPadClick(HWND hParentWnd)
 {
     playerScore += 1;
@@ -665,10 +629,10 @@ void HandleClickPadClick(HWND hParentWnd)
 void HandleWmCommand(WPARAM wParam, HWND hParentWnd){
     switch(wParam)
     {
-        case PARAM_MENU_EXIT:
-            PostQuitMessage (0);
+        case IDR_MENU_RESTART:
+            RestartGame(hMainParentWindow);
             break;
-        case PARAM_MENU_CUSTOM_GAME:
+        case IDR_MENU_CUSTOM_GAME:
             DisplayDialogForCustomGame(hParentWnd);
             break;
         case CLICK_PAD_CLICKED:
@@ -724,7 +688,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
         case WM_CREATE:
             hMainParentWindow = hwnd;
 
-            AddMenus(hwnd);
+            //AddMenus(hwnd); //moved into recourse
             AppendGameStatusRibbon(hwnd);
 
             RestartGame(hMainParentWindow);
@@ -739,3 +703,63 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
 
     return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// /////////////////////////////////////////////////////////////////////
+// ///////////////////////////MENU//////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////
+// void AppendGameNewSubMenu(HMENU hParentMenu)
+// {
+//     HMENU hGameNewMenu = CreateMenu();
+//     AppendMenu(hParentMenu, MF_POPUP, (UINT_PTR)hGameNewMenu, "New");
+
+//     AppendMenu(hGameNewMenu, MF_SEPARATOR, NULL, NULL);
+//     AppendMenu(hGameNewMenu, MF_STRING, PARAM_MENU_CUSTOM_GAME, "Custom");
+// }
+
+// void AppendGameSubMenu(HMENU hParentMenu)
+// {
+//     HMENU hGameMenu = CreateMenu();
+//     AppendMenu(hParentMenu, MF_POPUP, (UINT_PTR)hGameMenu, "Game");
+
+//     AppendGameNewSubMenu(hGameMenu);
+//     AppendMenu(hGameMenu, MF_SEPARATOR, NULL, NULL);
+//     AppendMenu(hGameMenu, MF_STRING, NULL, "SaveSettings");
+// }
+
+// void AddMenus(HWND hWnd)
+// {
+//     hMenu = CreateMenu();
+
+//     AppendGameSubMenu(hMenu);
+
+//     AppendMenu(hMenu, MF_STRING, PARAM_MENU_EXIT, "Exit");
+
+//     SetMenu(hWnd, hMenu);
+// }
+// /////////////////////////////////////////////////////////////////////
+// ///////////////////////////MENU//////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////
