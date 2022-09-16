@@ -697,6 +697,7 @@ void ParseCustomGameSettingsFileIntoVector(CHAR *buffer)
 
 void SetCustomGameSettingsFromFile()
 {
+    customGameSettings.clear();
     HANDLE hFile = CreateFile(
       ".\\custom_game_settings.csv",     // Filename
       GENERIC_READ ,          // Desired access
@@ -733,7 +734,12 @@ void LoadCustomGameSettings()
 {
     HMENU submenuNewGame = GetSubMenu(hMenu, 0);
 
-    for(int i=0; i<customGameSettings.size(); i++)
+    bool succRemoved = true;
+    while(succRemoved)
+    {
+        succRemoved = RemoveMenu(submenuNewGame, 2, MF_BYPOSITION);
+    }
+    for(int i=customGameSettings.size()-1; i>0; i--)
     {
         CustomGameSetting setting = customGameSettings.at(i);
         AppendCustomGameSettingToMenu(setting, submenuNewGame);
@@ -759,7 +765,7 @@ void HandleWmCommand(WPARAM wParam, HWND hParentWnd){
         case IDR_MENU_SAVE_SETTINGS:
             SaveCustomGameSetting(mapXClickPadsCount, mapYClickPadsCount, clickPadsVisible);
             SetCustomGameSettingsFromFile();
-            AppendLastCustomGameSettingToMenu();
+            LoadCustomGameSettings();
             break;
         case IDR_MENU_RESTART:
             RestartGame(hMainParentWindow);
