@@ -42,6 +42,10 @@ struct HandlersDialogCustomGame
 {
     HWND height, width, visiblePads;
 };
+struct CustomGameSetting
+{
+    int width, height, visiblePads;
+};
 
 std::ofstream MyFile("test.txt");
 
@@ -79,6 +83,8 @@ int clickPadHeight;
 std::vector<std::tuple <int, int>> allClickPadsPos;
 std::vector<HBITMAP> clickPadImages;
 std::deque<ClickPad> currClickPads;
+
+std::deque<CustomGameSetting> customGameSettings;
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
@@ -541,6 +547,17 @@ void HandleCustomGameChoice()
     SetValuesFromDialogCustomGame();
 }
 
+void HandleCustomGameSavedChoice(int neededIndex)
+{
+    CustomGameSetting setting = customGameSettings.at(neededIndex);
+
+    mapXClickPadsCount = setting.width;
+    mapYClickPadsCount = setting.height;
+    clickPadsVisible = setting.visiblePads;
+
+    RestartGame(hMainParentWindow);
+}
+
 LRESULT CALLBACK DialogProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     switch(msg)
@@ -618,6 +635,134 @@ void DisplayDialogForCustomGame(HWND hParentWnd)
 //-----------------------------------------------------------------//
 //-----------------------------------------------------------------//
 //-----------------------------------------------------------------//
+/////////////////////////////////////////////////////////////////////
+///////////////////////////////FILE//////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+void SaveCustomGameSetting(int height, int width, int visibleClickPads)
+{
+   HANDLE hFile = CreateFile(
+      ".\\custom_game_settings.csv",     // Filename
+      FILE_APPEND_DATA ,          // Desired access
+      FILE_SHARE_READ,        // Share mode
+      NULL,                   // Security attributes
+      OPEN_ALWAYS,             //opens or creates if doesnt exidst
+      FILE_ATTRIBUTE_NORMAL,  // Flags and attributes
+      NULL);                  // Template file handle
+
+   if (hFile == INVALID_HANDLE_VALUE)
+   {
+      return;
+   }
+
+   std::string strText = std::to_string(width) + ", " + std::to_string(height) + ", " + std::to_string(visibleClickPads) + "\n";
+   DWORD bytesWritten;
+
+   WriteFile(
+      hFile,            // Handle to the file
+      strText.c_str(),  // Buffer to write
+      strText.size(),   // Buffer size
+      &bytesWritten,    // Bytes written
+      nullptr);         // Overlapped
+
+   // Close the handle once we don't need it.
+   CloseHandle(hFile);
+}
+
+void tokenize(std::string const &str, const char delim,
+            std::vector<std::string> &out)
+{
+    size_t start;
+    size_t end = 0;
+
+    while ((start = str.find_first_not_of(delim, end)) != std::string::npos)
+    {
+        end = str.find(delim, start);
+        out.push_back(str.substr(start, end - start));
+    }
+}
+
+void ParseCustomGameSettingsFileIntoVector(CHAR *buffer)
+{
+    std::vector<std::string> linesOfSettings;
+    tokenize(buffer, '\n', linesOfSettings);
+    for (int i=0; i<linesOfSettings.size() - 1; i++)
+    {
+        std::vector<std::string> settingsVector;
+        tokenize(linesOfSettings.at(i), ',', settingsVector);
+        if(settingsVector.size() == 3)
+        {
+            struct CustomGameSetting setting;
+            try{
+                setting = {
+                    std::stoi(settingsVector.at(0)),
+                    std::stoi(settingsVector.at(1)),
+                    std::stoi(settingsVector.at(2))
+                };
+                customGameSettings.push_front(setting);
+            }catch(const std::invalid_argument& ia){};
+        }
+        settingsVector.clear();
+    }
+    linesOfSettings.clear();
+}
+
+void SetCustomGameSettingsFromFile()
+{
+    customGameSettings.clear();
+    HANDLE hFile = CreateFile(
+      ".\\custom_game_settings.csv",     // Filename
+      GENERIC_READ ,          // Desired access
+      FILE_SHARE_READ,        // Share mode
+      NULL,                   // Security attributes
+      OPEN_ALWAYS,             //opens or creates if doesnt exidst
+      FILE_ATTRIBUTE_NORMAL,  // Flags and attributes
+      NULL);                  // Template file handle
+
+    CHAR buffer[4095];
+    DWORD bytes_read;
+    while (ReadFile(hFile, buffer, 4095, &bytes_read, NULL)
+      && bytes_read > 0);
+
+    ParseCustomGameSettingsFileIntoVector(buffer);
+    CloseHandle(hFile);
+}
+
+void AppendCustomGameSettingToMenu(CustomGameSetting setting, HMENU hParentMenu, int idrForNewItem)
+{
+    std::string menuString = std::to_string(setting.width) + "x" + std::to_string(setting.height) + "    v" + std::to_string(setting.visiblePads);
+    LPSTR s = const_cast<char *>(menuString.c_str());
+    AppendMenu(hParentMenu, MF_STRING, idrForNewItem, s);
+}
+
+void AppendLastCustomGameSettingToMenu()
+{
+    HMENU submenuNewGame = GetSubMenu(hMenu, 0);
+    CustomGameSetting setting = customGameSettings.at(customGameSettings.size()-1);
+    AppendCustomGameSettingToMenu(setting, submenuNewGame, IDR_MENU_CUSTOM_GAME_SAVED_LIST_START);
+}
+
+void LoadCustomGameSettings()
+{
+    HMENU submenuNewGame = GetSubMenu(hMenu, 0);
+
+    bool succRemoved = true;
+    while(succRemoved)
+    {
+        succRemoved = RemoveMenu(submenuNewGame, 2, MF_BYPOSITION);
+    }
+    for(int i=0; i<customGameSettings.size()-1 && i<10; i++)
+    {
+        int idrForNewItem = IDR_MENU_CUSTOM_GAME_SAVED_LIST_START + i;
+        CustomGameSetting setting = customGameSettings.at(i);
+        AppendCustomGameSettingToMenu(setting, submenuNewGame, idrForNewItem);
+    }
+}
+/////////////////////////////////////////////////////////////////////
+///////////////////////////////FILE//////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
+//-----------------------------------------------------------------//
 void HandleClickPadClick(HWND hParentWnd)
 {
     playerScore += 1;
@@ -629,6 +774,11 @@ void HandleClickPadClick(HWND hParentWnd)
 void HandleWmCommand(WPARAM wParam, HWND hParentWnd){
     switch(wParam)
     {
+        case IDR_MENU_SAVE_SETTINGS:
+            SaveCustomGameSetting(mapXClickPadsCount, mapYClickPadsCount, clickPadsVisible);
+            SetCustomGameSettingsFromFile();
+            LoadCustomGameSettings();
+            break;
         case IDR_MENU_RESTART:
             RestartGame(hMainParentWindow);
             break;
@@ -640,6 +790,10 @@ void HandleWmCommand(WPARAM wParam, HWND hParentWnd){
             break;
         case TEST:
             break;
+        case IDR_MENU_CUSTOM_GAME_SAVED_LIST_START ... IDR_MENU_CUSTOM_GAME_SAVED_LIST_END:
+            HandleCustomGameSavedChoice(wParam - IDR_MENU_CUSTOM_GAME_SAVED_LIST_START);
+            break;
+
     }
 }
 
@@ -686,7 +840,10 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             HandleWmCommand(wParam, hwnd);
             break;
         case WM_CREATE:
+            SetCustomGameSettingsFromFile();
             hMainParentWindow = hwnd;
+            hMenu = GetMenu(hwnd);
+            LoadCustomGameSettings();
 
             //AddMenus(hwnd); //moved into recourse
             AppendGameStatusRibbon(hwnd);

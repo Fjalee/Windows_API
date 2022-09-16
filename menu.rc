@@ -4,8 +4,8 @@ IDR_MYMENU MENU
 BEGIN
     POPUP "&New game"
     BEGIN
-        MENUITEM "", 0, MENUBREAK
         MENUITEM "&Custom", IDR_MENU_CUSTOM_GAME
+        MENUITEM "", 0, MENUBREAK
     END
     MENUITEM "&Save settings", IDR_MENU_SAVE_SETTINGS
     MENUITEM "&Restart", IDR_MENU_RESTART
