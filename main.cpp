@@ -718,7 +718,7 @@ void SetCustomGameSettingsFromFile()
 
 void AppendCustomGameSettingToMenu(CustomGameSetting setting, HMENU hParentMenu)
 {
-    std::string menuString = std::to_string(setting.height) + "x" + std::to_string(setting.width) + " visibile-" + std::to_string(setting.visiblePads);
+    std::string menuString = std::to_string(setting.height) + "x" + std::to_string(setting.width) + "    v" + std::to_string(setting.visiblePads);
     LPSTR s = const_cast<char *>(menuString.c_str());
     AppendMenu(hParentMenu, MF_STRING, 0, s);
 }
