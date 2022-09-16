@@ -712,6 +712,7 @@ void SetCustomGameSettingsFromFile()
       && bytes_read > 0);
 
     ParseCustomGameSettingsFileIntoVector(buffer);
+    CloseHandle(hFile);
 }
 
 void LoadCustomGameSettings()
