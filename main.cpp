@@ -42,6 +42,10 @@ struct HandlersDialogCustomGame
 {
     HWND height, width, visiblePads;
 };
+struct CustomGameSetting
+{
+    int height, width, visiblePads;
+};
 
 std::ofstream MyFile("test.txt");
 
@@ -79,6 +83,8 @@ int clickPadHeight;
 std::vector<std::tuple <int, int>> allClickPadsPos;
 std::vector<HBITMAP> clickPadImages;
 std::deque<ClickPad> currClickPads;
+
+std::vector<CustomGameSetting> customGameSettings;
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
@@ -650,6 +656,68 @@ void SaveCustomGameSetting(int height, int width, int visibleClickPads)
    // Close the handle once we don't need it.
    CloseHandle(hFile);
 }
+
+void tokenize(std::string const &str, const char delim,
+            std::vector<std::string> &out)
+{
+    size_t start;
+    size_t end = 0;
+
+    while ((start = str.find_first_not_of(delim, end)) != std::string::npos)
+    {
+        end = str.find(delim, start);
+        out.push_back(str.substr(start, end - start));
+    }
+}
+
+void ParseCustomGameSettingsFileIntoVector(CHAR *buffer)
+{
+    std::vector<std::string> linesOfSettings;
+    tokenize(buffer, '\n', linesOfSettings);
+    for (int i=0; i<linesOfSettings.size() - 1; i++)
+    {
+        std::vector<std::string> settingsVector;
+        tokenize(linesOfSettings.at(i), ',', settingsVector);
+        if(settingsVector.size() == 3)
+        {
+            struct CustomGameSetting setting;
+            try{
+                setting = {
+                    std::stoi(settingsVector.at(0)),
+                    std::stoi(settingsVector.at(1)),
+                    std::stoi(settingsVector.at(2))
+                };
+                customGameSettings.push_back(setting);
+            }catch(const std::invalid_argument& ia){};
+        }
+        settingsVector.clear();
+    }
+    linesOfSettings.clear();
+}
+
+void SetCustomGameSettingsFromFile()
+{
+    HANDLE hFile = CreateFile(
+      ".\\custom_game_settings.csv",     // Filename
+      GENERIC_READ ,          // Desired access
+      FILE_SHARE_READ,        // Share mode
+      NULL,                   // Security attributes
+      OPEN_ALWAYS,             //opens or creates if doesnt exidst
+      FILE_ATTRIBUTE_NORMAL,  // Flags and attributes
+      NULL);                  // Template file handle
+
+    CHAR buffer[4095];
+    DWORD bytes_read;
+    while (ReadFile(hFile, buffer, 4095, &bytes_read, NULL)
+      && bytes_read > 0);
+
+    ParseCustomGameSettingsFileIntoVector(buffer);
+}
+
+void LoadCustomGameSettings()
+{
+
+}
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////////FILE//////////////////////////////////
 /////////////////////////////////////////////////////////////////////
@@ -669,6 +737,8 @@ void HandleWmCommand(WPARAM wParam, HWND hParentWnd){
     {
         case IDR_MENU_SAVE_SETTINGS:
             SaveCustomGameSetting(mapXClickPadsCount, mapYClickPadsCount, clickPadsVisible);
+            SetCustomGameSettingsFromFile();
+            LoadCustomGameSettings();
             break;
         case IDR_MENU_RESTART:
             RestartGame(hMainParentWindow);
@@ -727,6 +797,8 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             HandleWmCommand(wParam, hwnd);
             break;
         case WM_CREATE:
+            SetCustomGameSettingsFromFile();
+            LoadCustomGameSettings();
             hMainParentWindow = hwnd;
 
             //AddMenus(hwnd); //moved into recourse
