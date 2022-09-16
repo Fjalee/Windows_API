@@ -44,7 +44,7 @@ struct HandlersDialogCustomGame
 };
 struct CustomGameSetting
 {
-    int height, width, visiblePads;
+    int width, height, visiblePads;
 };
 
 std::ofstream MyFile("test.txt");
@@ -643,7 +643,7 @@ void SaveCustomGameSetting(int height, int width, int visibleClickPads)
       return;
    }
 
-   std::string strText = std::to_string(height) + ", " + std::to_string(width) + ", " + std::to_string(visibleClickPads) + "\n";
+   std::string strText = std::to_string(width) + ", " + std::to_string(height) + ", " + std::to_string(visibleClickPads) + "\n";
    DWORD bytesWritten;
 
    WriteFile(
@@ -718,7 +718,7 @@ void SetCustomGameSettingsFromFile()
 
 void AppendCustomGameSettingToMenu(CustomGameSetting setting, HMENU hParentMenu)
 {
-    std::string menuString = std::to_string(setting.height) + "x" + std::to_string(setting.width) + "    v" + std::to_string(setting.visiblePads);
+    std::string menuString = std::to_string(setting.width) + "x" + std::to_string(setting.height) + "    v" + std::to_string(setting.visiblePads);
     LPSTR s = const_cast<char *>(menuString.c_str());
     AppendMenu(hParentMenu, MF_STRING, 0, s);
 }
