@@ -84,7 +84,7 @@ std::vector<std::tuple <int, int>> allClickPadsPos;
 std::vector<HBITMAP> clickPadImages;
 std::deque<ClickPad> currClickPads;
 
-std::vector<CustomGameSetting> customGameSettings;
+std::deque<CustomGameSetting> customGameSettings;
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
@@ -547,6 +547,17 @@ void HandleCustomGameChoice()
     SetValuesFromDialogCustomGame();
 }
 
+void HandleCustomGameSavedChoice(int neededIndex)
+{
+    CustomGameSetting setting = customGameSettings.at(neededIndex);
+
+    mapXClickPadsCount = setting.width;
+    mapYClickPadsCount = setting.height;
+    clickPadsVisible = setting.visiblePads;
+
+    RestartGame(hMainParentWindow);
+}
+
 LRESULT CALLBACK DialogProcedure(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     switch(msg)
@@ -687,7 +698,7 @@ void ParseCustomGameSettingsFileIntoVector(CHAR *buffer)
                     std::stoi(settingsVector.at(1)),
                     std::stoi(settingsVector.at(2))
                 };
-                customGameSettings.push_back(setting);
+                customGameSettings.push_front(setting);
             }catch(const std::invalid_argument& ia){};
         }
         settingsVector.clear();
@@ -716,18 +727,18 @@ void SetCustomGameSettingsFromFile()
     CloseHandle(hFile);
 }
 
-void AppendCustomGameSettingToMenu(CustomGameSetting setting, HMENU hParentMenu)
+void AppendCustomGameSettingToMenu(CustomGameSetting setting, HMENU hParentMenu, int idrForNewItem)
 {
     std::string menuString = std::to_string(setting.width) + "x" + std::to_string(setting.height) + "    v" + std::to_string(setting.visiblePads);
     LPSTR s = const_cast<char *>(menuString.c_str());
-    AppendMenu(hParentMenu, MF_STRING, 0, s);
+    AppendMenu(hParentMenu, MF_STRING, idrForNewItem, s);
 }
 
 void AppendLastCustomGameSettingToMenu()
 {
     HMENU submenuNewGame = GetSubMenu(hMenu, 0);
     CustomGameSetting setting = customGameSettings.at(customGameSettings.size()-1);
-    AppendCustomGameSettingToMenu(setting, submenuNewGame);
+    AppendCustomGameSettingToMenu(setting, submenuNewGame, IDR_MENU_CUSTOM_GAME_SAVED_LIST_START);
 }
 
 void LoadCustomGameSettings()
@@ -739,11 +750,11 @@ void LoadCustomGameSettings()
     {
         succRemoved = RemoveMenu(submenuNewGame, 2, MF_BYPOSITION);
     }
-    int added = 0;
-    for(int i=customGameSettings.size()-1; i>0 && added<10; i--, added++)
+    for(int i=0; i<customGameSettings.size()-1 && i<10; i++)
     {
+        int idrForNewItem = IDR_MENU_CUSTOM_GAME_SAVED_LIST_START + i;
         CustomGameSetting setting = customGameSettings.at(i);
-        AppendCustomGameSettingToMenu(setting, submenuNewGame);
+        AppendCustomGameSettingToMenu(setting, submenuNewGame, idrForNewItem);
     }
 }
 /////////////////////////////////////////////////////////////////////
@@ -779,6 +790,10 @@ void HandleWmCommand(WPARAM wParam, HWND hParentWnd){
             break;
         case TEST:
             break;
+        case IDR_MENU_CUSTOM_GAME_SAVED_LIST_START ... IDR_MENU_CUSTOM_GAME_SAVED_LIST_END:
+            HandleCustomGameSavedChoice(wParam - IDR_MENU_CUSTOM_GAME_SAVED_LIST_START);
+            break;
+
     }
 }
 
