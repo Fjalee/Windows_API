@@ -715,9 +715,29 @@ void SetCustomGameSettingsFromFile()
     CloseHandle(hFile);
 }
 
+void AppendCustomGameSettingToMenu(CustomGameSetting setting, HMENU hParentMenu)
+{
+    std::string menuString = std::to_string(setting.height) + "x" + std::to_string(setting.width) + " visibile-" + std::to_string(setting.visiblePads);
+    LPSTR s = const_cast<char *>(menuString.c_str());
+    AppendMenu(hParentMenu, MF_STRING, 0, s);
+}
+
+void AppendLastCustomGameSettingToMenu()
+{
+    HMENU submenuNewGame = GetSubMenu(hMenu, 0);
+    CustomGameSetting setting = customGameSettings.at(customGameSettings.size()-1);
+    AppendCustomGameSettingToMenu(setting, submenuNewGame);
+}
+
 void LoadCustomGameSettings()
 {
+    HMENU submenuNewGame = GetSubMenu(hMenu, 0);
 
+    for(int i=0; i<customGameSettings.size(); i++)
+    {
+        CustomGameSetting setting = customGameSettings.at(i);
+        AppendCustomGameSettingToMenu(setting, submenuNewGame);
+    }
 }
 /////////////////////////////////////////////////////////////////////
 ///////////////////////////////FILE//////////////////////////////////
@@ -739,7 +759,7 @@ void HandleWmCommand(WPARAM wParam, HWND hParentWnd){
         case IDR_MENU_SAVE_SETTINGS:
             SaveCustomGameSetting(mapXClickPadsCount, mapYClickPadsCount, clickPadsVisible);
             SetCustomGameSettingsFromFile();
-            LoadCustomGameSettings();
+            AppendLastCustomGameSettingToMenu();
             break;
         case IDR_MENU_RESTART:
             RestartGame(hMainParentWindow);
@@ -799,8 +819,9 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             break;
         case WM_CREATE:
             SetCustomGameSettingsFromFile();
-            LoadCustomGameSettings();
             hMainParentWindow = hwnd;
+            hMenu = GetMenu(hwnd);
+            LoadCustomGameSettings();
 
             //AddMenus(hwnd); //moved into recourse
             AppendGameStatusRibbon(hwnd);
