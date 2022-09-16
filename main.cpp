@@ -739,7 +739,8 @@ void LoadCustomGameSettings()
     {
         succRemoved = RemoveMenu(submenuNewGame, 2, MF_BYPOSITION);
     }
-    for(int i=customGameSettings.size()-1; i>0; i--)
+    int added = 0;
+    for(int i=customGameSettings.size()-1; i>0 && added<10; i--, added++)
     {
         CustomGameSetting setting = customGameSettings.at(i);
         AppendCustomGameSettingToMenu(setting, submenuNewGame);
