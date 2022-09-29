@@ -4,12 +4,6 @@
 #define COLORREF2RGB(Color) (Color & 0xff00) | ((Color >> 16) & 0xff) \
                                  | ((Color << 16) & 0xff0000)
 
-// a sample exported function
-void DLL_EXPORT SomeFunction(const LPCSTR sometext)
-{
-    MessageBoxA(0, sometext, "DLL Message", MB_OK | MB_ICONINFORMATION);
-}
-
 //-------------------------------------------------------------------------------
 // hBmp         : Source Bitmap
 // cOldColor : Color to replace in hBmp
@@ -18,7 +12,7 @@ void DLL_EXPORT SomeFunction(const LPCSTR sometext)
 //
 // Retcode   : HBITMAP of the modified bitmap or NULL for errors
 //-------------------------------------------------------------------------------
-HBITMAP ReplaceColor(HBITMAP hBmp,COLORREF cOldColor,COLORREF cNewColor,HDC hBmpDC)
+HBITMAP DLL_EXPORT ReplaceColor(HBITMAP hBmp,COLORREF cOldColor,COLORREF cNewColor,HDC hBmpDC)
 {
     HBITMAP RetBmp=NULL;
     if (hBmp)

@@ -19,7 +19,7 @@ extern "C"
 {
 #endif
 
-void DLL_EXPORT SomeFunction(const LPCSTR sometext);
+HBITMAP DLL_EXPORT ReplaceColor(HBITMAP hBmp,COLORREF cOldColor,COLORREF cNewColor,HDC hBmpDC);
 
 #ifdef __cplusplus
 }
