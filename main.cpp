@@ -738,7 +738,7 @@ void RestartGame(HWND hwnd)
 
 void LoadMyLibs()
 {
-    HINSTANCE ColorLib = LoadLibrary("Color.dll");
+    HINSTANCE ColorLib = LoadLibrary("C:\\Users\\cepRy\\Desktop\\Windows_API_LW\\Color\\bin\\Debug\\Color.dll");
 
     if(ColorLib != NULL){
         ReplaceColor = (ReplaceColorProc) GetProcAddress(ColorLib, "ReplaceColor");
