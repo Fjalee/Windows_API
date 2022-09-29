@@ -20,9 +20,6 @@
 				</Compiler>
 				<Linker>
 					<Add library="user32" />
-					<Add library="gdi32" />
-					<Add library="kernel32" />
-					<Add library="comctl32" />
 				</Linker>
 			</Target>
 			<Target title="Release">
