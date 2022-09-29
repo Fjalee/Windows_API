@@ -17,6 +17,8 @@
 #include <algorithm>
 #include "menu.h"
 
+typedef void (__cdecl *MYPROC)(LPCSTR);
+
 #define CLICK_PAD_CLICKED 2
 #define HANDLE_CUSTOM_GAME_CHOICE 4
 #define TEST 3000
@@ -834,12 +836,20 @@ void RestartGame(HWND hwnd)
 
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    HINSTANCE testLib = LoadLibrary("tesDll.dll");
+    MYPROC testFunc;
     switch (message)                  /* handle the messages */
     {
         case WM_COMMAND:
             HandleWmCommand(wParam, hwnd);
             break;
         case WM_CREATE:
+            if(testLib != NULL){
+                testFunc = (MYPROC) GetProcAddress(testLib, "SomeFunction");
+            }
+            testFunc("test text");
+            FreeLibrary(testLib);
+
             SetCustomGameSettingsFromFile();
             hMainParentWindow = hwnd;
             hMenu = GetMenu(hwnd);
