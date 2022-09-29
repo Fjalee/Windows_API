@@ -26,6 +26,10 @@
 
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
+
+typedef HBITMAP (__cdecl *ReplaceColorProc)(HBITMAP, COLORREF, COLORREF, HDC);
+ReplaceColorProc ReplaceColor;
+
 void RegisterDialogForCustomGame(HINSTANCE hInst);
 void DisplayDialogForCustomGame(HWND hParentWnd);
 void RestartGame(HWND hWnd);
@@ -732,6 +736,16 @@ void RestartGame(HWND hwnd)
     AddGameMap(hwnd);
 }
 
+void LoadMyLibs()
+{
+    HINSTANCE ColorLib = LoadLibrary("Color.dll");
+
+    if(ColorLib != NULL){
+        ReplaceColor = (ReplaceColorProc) GetProcAddress(ColorLib, "ReplaceColor");
+    }
+    //FreeLibrary(ColorLib);
+}
+
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)                  /* handle the messages */
@@ -740,6 +754,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             HandleWmCommand(wParam, hwnd);
             break;
         case WM_CREATE:
+            LoadMyLibs();
             SetCustomGameSettingsFromFile();
             hMainParentWindow = hwnd;
             hMenu = GetMenu(hwnd);
